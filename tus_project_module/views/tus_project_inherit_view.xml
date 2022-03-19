@@ -2,18 +2,6 @@
 <odoo>
 
     <!-- Inherit Form View to Modify it -->
-    <record id="project_task_view_inherit" model="ir.ui.view">
-        <field name="name">project.task inherit</field>
-        <field name="model">project.task</field>
-        <field name="inherit_id" ref="project.view_task_form2"/>
-        <field name="arch" type="xml">
-            <xpath expr="//notebook/page[@name='description_page']" position="replace">
-                <page string="project Description">
-                <field name="project_description"/>
-                </page>
-            </xpath>
-        </field>
-    </record>
 
     <record id="project_task_view_search_inherit" model="ir.ui.view">
         <field name="name">project.task.view.search.inherit.sale.timesheet.enterprise.inherit</field>
