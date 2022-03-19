@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="tus_project_project_tree_view_inherit" model="ir.ui.view">
+        <field name="name">project.project inherit</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.view_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree/field[@name='date']" position="after">
+                <field name="email_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="tus_project_project_tree_view_kanban_inherit" model="ir.ui.view">
+        <field name="name">project.project inherit</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.view_project_kanban"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="email_id"/>
+            </xpath>
+            <xpath expr="//div[hasclass('o_kanban_primary_left')]//span[hasclass('o_text_overflow')]" position="after">
+                <t t-if="record.email_id.raw_value">
+                    <span class="fa fa-envelope-o mr-2" aria-label="E-mail" title="E-mail">
+                        <field name="email_id"/>
+                        <br>
+                            <field name="website"/>
+                        </br>
+                    </span>
+                </t>
+            </xpath>
+
+        </field>
+    </record>
+
+    <record id="tus_project_projectform_inherit" model="ir.ui.view">
+        <field name="name">project.project inherit</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='tag_ids']" position="after">
+                <field name="email_id"/>
+                <field name="website"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="project.open_view_project_all" model="ir.actions.act_window">
+            <field name="name">Projects</field>
+            <field name="res_model">project.project</field>
+            <field name="domain">[]</field>
+            <field name="view_mode">kanban,tree,form</field>
+            <field name="view_id" ref="project.view_project_kanban"/>
+            <field name="search_view_id" ref="project.view_project_project_filter"/>
+            <field name="target">main</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No projects found. Let's create one!
+                </p><p>
+                    Projects regroup tasks on the same topic, and each has its dashboard.
+                </p>
+            </field>
+        </record>
+</odoo>
