@@ -6,7 +6,7 @@
     'version': '1.0',
     'category': 'project',
     'summary': 'MBLZ Project',
-    'depends': ['project'],
+    'depends': ['project', 'account'],
     'data': [
         'security/project_security.xml',
         'views/tus_project_inherit_view.xml',

@@ -14,7 +14,8 @@ class Project(models.Model):
     def search_read(self, args=None, fields=None, offset=0, limit=None, order=None):
         if args is None:
             args = []
-        if self.env.user.has_group('tus_project_module.group_project_project_manager') and not self.env.user.has_group('project.group_project_manager'):
+        if self.env.user.has_group('tus_project_module.group_project_user') and not self.env.user.has_group('project.group_project_manager'):
             args += [('user_id', '=', self.env.user.id)]
+
         return super(Project, self).search_read(args, fields, offset, limit, order)
 
