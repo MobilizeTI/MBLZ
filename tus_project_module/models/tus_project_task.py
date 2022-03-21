@@ -7,9 +7,6 @@ from odoo import api, fields, models
 class ProjectTask(models.Model):
     _inherit = 'project.task'
 
-    planned_date = fields.Date('Planned Date')
-    data_deadline = fields.Date('Deadline')
-
 
     @api.model
     def search_read(self, args=None, fields=None, offset=0, limit=None, order=None):
