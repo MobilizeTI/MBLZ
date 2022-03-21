@@ -54,9 +54,9 @@
             <field name="target">main</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
-                    No projects found. Let's create one!
+                    No projects found. Let's create one !
                 </p><p>
-                    Projects regroup tasks on the same topic, and each has its dashboard.
+                    Projects regroup tasks on the same topic, and each has its dashboard .
                 </p>
             </field>
         </record>
