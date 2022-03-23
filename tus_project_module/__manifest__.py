@@ -6,7 +6,7 @@
     'version': '1.0',
     'category': 'project',
     'summary': 'MBLZ Project',
-    'depends': ['project', 'account'],
+    'depends': ['project', 'account', 'project_enterprise'],
     'data': [
         'security/ir.model.access.csv',
         'security/project_security.xml',
