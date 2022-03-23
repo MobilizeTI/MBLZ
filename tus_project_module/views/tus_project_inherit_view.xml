@@ -14,16 +14,38 @@
             </xpath>
         </field>
     </record>
-
-    <record id="view_task_tree2_inherited_mb" model="ir.ui.view">
-        <field name="name">project.task.tree.inherited.mb</field>
+    <record id="project_task_init_inherit" model="ir.ui.view">
+        <field name="name">project.task.view.init.inherit</field>
         <field name="model">project.task</field>
-        <field name="inherit_id" ref="project.view_task_tree2" />
+        <field name="field_parent">child_ids</field>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='project_id']" position='after'>
-                <field name="planned_date_begin"/>
-                <field name="date_deadline"/>
-            </xpath>
+            <init_tree string="Task">
+                <field name="code"/>
+                <field name="parent_id"/>
+                <field name="name"/>
+            </init_tree>
         </field>
     </record>
+    <record id="action_account_chart_template_111111" model="ir.actions.act_window">
+            <field name="name">111111111111</field>
+            <field name="res_model">project.task</field>
+            <field name="view_mode">init_tree</field>
+        </record>
+    <menuitem name="Bo111111111s"
+        id="menu_event_111111booth_category"
+        action="action_account_chart_template_111111"
+        sequence="20"
+        parent="project.menu_main_pm"/>
+
+<!--    <record id="view_task_tree2_inherited_mb" model="ir.ui.view">-->
+<!--        <field name="name">project.task.tree.inherited.mb</field>-->
+<!--        <field name="model">project.task</field>-->
+<!--        <field name="inherit_id" ref="project.view_task_tree2" />-->
+<!--        <field name="arch" type="xml">-->
+<!--            <xpath expr="//field[@name='project_id']" position='after'>-->
+<!--                <field name="planned_date_begin"/>-->
+<!--                <field name="date_deadline"/>-->
+<!--            </xpath>-->
+<!--        </field>-->
+<!--    </record>-->
 </odoo>

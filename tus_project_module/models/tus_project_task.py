@@ -7,6 +7,7 @@ from odoo import api, fields, models
 class ProjectTask(models.Model):
     _inherit = 'project.task'
 
+    code=fields.Char('code')
 
     @api.model
     def search_read(self, args=None, fields=None, offset=0, limit=None, order=None):
