@@ -21,7 +21,7 @@
         <field name="inherit_id" ref="project.view_task_tree2" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='project_id']" position='after'>
-                <field name="planned_date"/>
+                <field name="Planned_date_begin"/>
                 <field name="data_deadline"/>
             </xpath>
         </field>
