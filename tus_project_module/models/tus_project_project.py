@@ -7,7 +7,7 @@ from odoo import api, fields, models
 class Project(models.Model):
     _inherit = 'project.project'
 
-    email_id = fields.Char(string="Email Id")
+    email_id = fields.Char(string="Email")
     website = fields.Char(string="Website")
 
     @api.model

@@ -22,7 +22,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='project_id']" position='after'>
                 <field name="planned_date_begin"/>
-                <field name="data_deadline"/>
+                <field name="date_deadline"/>
             </xpath>
         </field>
     </record>
