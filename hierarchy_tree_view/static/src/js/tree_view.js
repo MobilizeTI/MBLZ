@@ -1,20 +1,20 @@
-odoo.define('init_web_tree_view.TreeView', function (require) {
+odoo.define('hierarchy_tree_view.TreeView', function (require) {
   "use strict";
 
   var core = require('web.core');
   var AbstractView = require('web.AbstractView');
   var BasicView = require('web.BasicView');
 
-  var TreeModel = require('init_web_tree_view.TreeModel');
-  var TreeRenderer = require('init_web_tree_view.TreeRenderer');
-  var TreeController = require('init_web_tree_view.TreeController');
+  var TreeModel = require('hierarchy_tree_view.TreeModel');
+  var TreeRenderer = require('hierarchy_tree_view.TreeRenderer');
+  var TreeController = require('hierarchy_tree_view.TreeController');
 
   var view_registry = require('web.view_registry');
 
   var _lt = core._lt;
 
   var InitTreeView = AbstractView.extend({
-    display_name: _lt('INIT Tree View'),
+    display_name: _lt('Hierarchy Tree View'),
     icon: 'fa-align-left',
     searchable: false,
     withSearchBar: false,

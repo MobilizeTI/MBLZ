@@ -1,4 +1,4 @@
-odoo.define('init_web_tree_view.TreeRenderer', function (require) {
+odoo.define('hierarchy_tree_view.TreeRenderer', function (require) {
 "use strict";
 
 var AbstractRenderer = require('web.AbstractRenderer');

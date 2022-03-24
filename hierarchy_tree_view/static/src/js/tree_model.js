@@ -1,4 +1,4 @@
-odoo.define('init_web_tree_view.TreeModel', function (require) {
+odoo.define('hierarchy_tree_view.TreeModel', function (require) {
 "use strict";
 
 var AbstractModel = require('web.AbstractModel');

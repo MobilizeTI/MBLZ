@@ -18,14 +18,14 @@
     'test': [],
     'assets': {
         'web.assets_backend': [
-            'init_web_tree_view/static/src/scss/tree_view.scss',
-            'init_web_tree_view/static/src/js/tree_controller.js',
-            'init_web_tree_view/static/src/js/tree_model.js',
-            'init_web_tree_view/static/src/js/tree_renderer.js',
-            'init_web_tree_view/static/src/js/tree_view.js',
+            'hierarchy_tree_view/static/src/scss/tree_view.scss',
+            'hierarchy_tree_view/static/src/js/tree_controller.js',
+            'hierarchy_tree_view/static/src/js/tree_model.js',
+            'hierarchy_tree_view/static/src/js/tree_renderer.js',
+            'hierarchy_tree_view/static/src/js/tree_view.js',
         ],
         'web.assets_qweb': [
-            'init_web_tree_view/static/src/xml/web_tree_view.xml',
+            'hierarchy_tree_view/static/src/xml/web_tree_view.xml',
         ],
     },
     'installable': True,

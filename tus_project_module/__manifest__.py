@@ -6,10 +6,10 @@
     'version': '1.0',
     'category': 'project',
     'summary': 'MBLZ Project',
-    'depends': ['project', 'account', 'init_web_tree_view'],
+    'depends': ['project','init_web_tree_view'],
     'data': [
-        'security/ir.model.access.csv',
         'security/project_security.xml',
+        'security/ir.model.access.csv',
         'views/tus_project_inherit_view.xml',
         'views/tus_project_project_inherit.xml',
     ],
