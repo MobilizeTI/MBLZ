@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_project_hierarchy" model="ir.ui.view">
+            <field name="name">project.task.hierarchy</field>
+            <field name="model">project.task</field>
+            <field name="field_parent">child_ids</field>
+            <field name="arch" type="xml">
+                <init_tree>
+                    <field name="name" string="Name"/>
+                    <field name="project_id"/>
+                    <field name="activity_date_deadline"/>
+                    <field name="activity_type_id"/>
+                    <field name="activity_summary"/>
+                    <field name="stage_id"/>
+                </init_tree>
+            </field>
+        </record>
+
+        <record id="open_project_task_hierarchy" model="ir.actions.act_window">
+            <field name="name">Task Hieararchy</field>
+            <field name="res_model">project.task</field>
+            <field name="domain">[]</field>
+            <field name="view_mode">init_tree</field>
+            <field name="domain">[('parent_id', '=', False)]</field>
+            <field name="view_id" ref="view_project_hierarchy"/>
+            <field name="target">main</field>
+        </record>
+
+        <menuitem action="open_project_task_hierarchy" id="menu_project_task_hieararchy" parent="project.menu_main_pm" sequence="1"/>
+
+    </data>
+</odoo>

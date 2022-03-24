@@ -19,5 +19,10 @@
 #
 ######################################################################
 
-from . import ir_view
-from . import project_task
+from odoo import fields, models, api
+
+
+class Task(models.Model):
+    _inherit = 'project.task'
+
+    child_ids = fields.One2many('project.task', 'parent_id', 'Child Tasks')

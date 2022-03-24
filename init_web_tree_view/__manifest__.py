@@ -5,29 +5,13 @@
     'category': 'Extra Tools',
     'summary': 'Hierarchy Tree View',
     'author': 'Init Co. Ltd',
-    'support': 'contact@init.vn',
-    'website': 'https://init.vn/?utm_source=odoo-store&utm_medium=15&utm_campaign=hierarchy-tree-view',
-    'license': 'LGPL-3',
-    'price': '29',
-    'currency': 'USD',
     'description': """Hierarchy Tree View""",
     'depends': [
         'web',
+        'project'
     ],
     'data': [
-        # data
-
-        # wizard
-
-        # view
-
-        # wizard
-
-        # report
-
-        # menu
-
-        # security
+        'views/project_task.xml',
     ],
     'qweb': [],
     'demo': [],
@@ -44,7 +28,6 @@
             'init_web_tree_view/static/src/xml/web_tree_view.xml',
         ],
     },
-    'images': ['static/description/banner.png'],
     'installable': True,
     'auto_install': False,
     'application': True,
