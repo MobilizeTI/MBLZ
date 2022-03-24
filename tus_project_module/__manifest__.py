@@ -6,7 +6,7 @@
     'version': '1.0',
     'category': 'project',
     'summary': 'MBLZ Project',
-    'depends': ['project','init_web_tree_view'],
+    'depends': ['project', 'project_enterprise'],
     'data': [
         'security/project_security.xml',
         'security/ir.model.access.csv',
