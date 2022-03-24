@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_project_hierarchy" model="ir.ui.view">
+            <field name="name">project.task.hierarchy</field>
+            <field name="model">project.task</field>
+            <field name="field_parent">child_ids</field>
+            <field name="arch" type="xml">
+                <init_tree>
+                    <field name="name" string="Name"/>
+                    <field name="project_id"/>
+                    <field name="activity_date_deadline"/>
+                    <field name="activity_type_id"/>
+                    <field name="activity_summary"/>
+                    <field name="stage_id"/>
+                </init_tree>
+            </field>
+        </record>
+
+        <record id="open_project_task_hierarchy" model="ir.actions.act_window">
+            <field name="name">Task Hieararchy</field>
+            <field name="res_model">project.task</field>
+            <field name="domain">[]</field>
+            <field name="view_mode">init_tree</field>
+            <field name="domain">[('parent_id', '=', False)]</field>
+            <field name="view_id" ref="view_project_hierarchy"/>
+            <field name="target">main</field>
+        </record>
+
+<!--        <menuitem action="open_project_task_hierarchy" id="menu_project_task_hieararchy" parent="project.menu_main_pm" sequence="1"/>-->
+
+        <record id="project.action_view_all_task" model="ir.actions.act_window">
+            <field name="name">My Tasks</field>
+            <field name="res_model">project.task</field>
+            <field name="view_mode">kanban,tree,init_tree,form,calendar,pivot,graph,activity</field>
+            <field name="context">{'search_default_my_tasks': 1, 'search_default_personal_stage': 1, 'all_task': 0}</field>
+            <field name="search_view_id" ref="project.view_task_search_form_extended"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No tasks found. Let's create one!
+                </p><p>
+                     To get things done, use activities and status on tasks.<br/>
+                    Chat in real-time or by email to collaborate efficiently.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>
