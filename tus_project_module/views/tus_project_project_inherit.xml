@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="tus_project_project_tree_view_inherit" model="ir.ui.view">
-        <field name="name">project.project inherit</field>
+        <field name="name">project.project.tree.inherit.mb</field>
         <field name="model">project.project</field>
         <field name="inherit_id" ref="project.view_project"/>
         <field name="arch" type="xml">
@@ -12,7 +12,7 @@
     </record>
 
     <record id="tus_project_project_tree_view_kanban_inherit" model="ir.ui.view">
-        <field name="name">project.project inherit</field>
+        <field name="name">project.project.kanban.inherit.mb</field>
         <field name="model">project.project</field>
         <field name="inherit_id" ref="project.view_project_kanban"/>
         <field name="arch" type="xml">
@@ -34,7 +34,7 @@
     </record>
 
     <record id="tus_project_projectform_inherit" model="ir.ui.view">
-        <field name="name">project.project inherit</field>
+        <field name="name">project.project.form.inherit.mb</field>
         <field name="model">project.project</field>
         <field name="inherit_id" ref="project.edit_project"/>
         <field name="arch" type="xml">
@@ -54,9 +54,9 @@
             <field name="target">main</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
-                    No projects found. Let's create one!
+                    No projects found. Let's create one !
                 </p><p>
-                    Projects regroup tasks on the same topic, and each has its dashboard.
+                    Projects regroup tasks on the same topic, and each has its dashboard .
                 </p>
             </field>
         </record>
