@@ -47,7 +47,7 @@
         <record id="project.act_project_project_2_project_task_all" model="ir.actions.act_window">
             <field name="name">Tasks</field>
             <field name="res_model">project.task</field>
-            <field name="view_mode">kanban,tree,form,calendar,pivot,graph,activity</field>
+            <field name="view_mode">kanban,tree,init_tree,form,calendar,pivot,graph,activity</field>
             <field name="domain">[('display_project_id', '=', active_id)]</field>
             <field name="context">{
                 'pivot_row_groupby': ['user_ids'],
