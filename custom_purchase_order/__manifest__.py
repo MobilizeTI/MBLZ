@@ -10,9 +10,8 @@
     'author': "Christopher García gutierrez.cg33@gmail.com",
 
     'category': 'purchase',
-    'version': '0.1',
+    'version': '14.0.1',
 
-    # any module necessary for this one to work correctly
     'depends': ['purchase'],
 
     # always loaded
