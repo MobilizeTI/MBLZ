@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from tkinter import S
-
-
 {
     'name': "Customización en pedidos de compra (Prueba)",
 
