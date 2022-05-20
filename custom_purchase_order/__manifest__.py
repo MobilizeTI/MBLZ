@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from tkinter import S
+
+
 {
     'name': "Customización en pedidos de compra (Prueba)",
 
@@ -12,7 +15,10 @@
     'category': 'purchase',
     'version': '14.0.1',
 
-    'depends': ['purchase'],
+    'depends': [
+        'purchase',
+        'stock' # TODO
+        ],
 
     # always loaded
     'data': [
