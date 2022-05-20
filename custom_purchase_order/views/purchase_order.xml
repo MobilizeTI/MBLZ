@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record model="ir.ui.view" id="purchase_order_form_inherit_test">            
+            <field name="name">purchase.order.form.inherit.test</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+                <field name="arch" type="xml"> 
+                    <xpath expr="//field[@name='order_line']//tree//field[@name='price_subtotal']" position="after">
+                        <button name="show_item_action" type="object" title="Ir al registro" class="fa fa-external-link btn-link"/>
+                    </xpath>
+                </field>
+        </record>
+
+
+        <record id="purchase_order_line_form777" model="ir.ui.view">
+            <field name="name">purchase.order.line.form777</field>
+            <field name="model">purchase.order.line</field>
+            <field name="priority" eval="20"/>
+            <field name="arch" type="xml">
+                <form string="Purchase Order Line">
+                    <sheet>
+                       <group>
+                           <group>
+                                <field name="product_id" readonly="1"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="purchase_query_ids" nolabel="1">
+                                <tree>
+                                    <field name="invoice_name"/>
+                                    <field name="date_invoice"/>
+                                    <field name="partner_id" readonly="1"/>
+                                    <field name="name"/>
+                                    <field name="create_date"/>
+                                    <field name="product_query"/>
+                                    <field name="product_qty"/>
+                                    <field name="qty_received"/>
+                                    <field name="price_unit"/>
+                                    <field name="bodeg"/>
+                                </tree>
+                            </field>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button special="cancel" string="Continuar" class="oe_highlight"/>
+                    </footer>
+                </form>
+            </field>
+        </record>            
+
+        <record id="res_config_settings_view_form_stock_test" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.purchase.stock</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="stock.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='purchase_setting_container']" position="after">
+
+                <div class="row mt16 o_settings_container">
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane"/>
+                                <div class="o_setting_right_pane">
+                                    <label for="qty_lines_on_purchase_line"/>
+                                    <div class="text-muted">Definirá las lineas que ese mostraran en el botón de consulta de cada pedido</div>
+                                    <field name="qty_lines_on_purchase_line" widget="int"/>
+                                </div>
+                            </div>
+                </div>
+            </xpath>
+        </field>
+        </record>
+
+
+     </data>
+</odoo>

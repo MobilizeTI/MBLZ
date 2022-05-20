@@ -1,0 +1,4 @@
+[submodule "auto_backup_mblz"]
+	path = auto_backup_mblz
+	url = git@github.com:MobilizeDevTeam/auto_backup_mblz.git
+	branch = 14.0

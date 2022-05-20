@@ -9,17 +9,12 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class ProjectProject(models.Model):
-    _inherit = 'project.project'
-
-    label_tickets = fields.Char(string='Use Tickets as', default='Tickets',
-                                help="Label used for the tickets of the project.", translate=True)
-    tickets_count = fields.Integer(compute='_compute_ticket_count', string="Tickets Count")
+class MblzApiInfo(models.Model):
+    _name = 'mblz.api.info'
+    _description = 'Conexión a Api Mobilize'
     
-    # mblz_api_info_id = fields.Many2one('mblz.api.info', strong='Información Api')
-    
-    active_in_api = fields.Boolean('Activo')
-    api_token = fields.Char('Token')
+    active = fields.Boolean('Activo')
+    token = fields.Char('Token')
     
     def generate_token(self):
         for rec in self:
@@ -42,15 +37,3 @@ class ProjectProject(models.Model):
                 Api.send_to_api(self, data)
             else:
                 raise UserError('Must select a partner for token generation')
-
-    def _compute_ticket_count(self):
-        for project in self:
-            project.tickets_count = project.env['helpdesk.ticket'].sudo().search_count(
-                [('project_ids', 'in', [project.id])])
-
-    def action_view_tickets(self):
-        action = self.with_context(active_id=self.id, active_ids=self.ids) \
-            .env.ref('mblz_customs.mblz_helpdesk_ticket_action_project') \
-            .sudo().read()[0]
-        action['display_name'] = self.name
-        return action
