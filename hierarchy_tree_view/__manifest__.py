@@ -28,6 +28,7 @@
             'hierarchy_tree_view/static/src/xml/web_tree_view.xml',
         ],
     },
+    'licence': 'LGPL-3',
     'installable': True,
     'auto_install': False,
     'application': True,
