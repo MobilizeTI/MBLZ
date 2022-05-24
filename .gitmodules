@@ -3,3 +3,7 @@
 	url = git@github.com:MobilizeDevTeam/auto_backup_mblz.git
 	branch = 14.0
 
+[submodule "mblz_customs"]
+	path = mblz_customs
+	url = git@github.com:MobilizeDevTeam/mblz_customs.git
+	branch = 15-christopher
