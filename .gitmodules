@@ -6,4 +6,4 @@
 [submodule "mblz_customs"]
 	path = mblz_customs
 	url = git@github.com:MobilizeDevTeam/mblz_customs.git
-	branch = 15-christopher
+	branch = 15.0
