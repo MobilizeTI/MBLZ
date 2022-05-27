@@ -11,3 +11,7 @@
 	path = account_group_hierarchy
 	url = git@github.com:MobilizeDevTeam/account_group_hierarchy.git
 	branch = 14.0
+[submodule "app_project_superbar"]
+	path = app_project_superbar
+	url = git@github.com:MobilizeDevTeam/app_project_superbar.git
+	branch = 15.0
