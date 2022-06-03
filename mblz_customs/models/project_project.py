@@ -9,6 +9,7 @@ class ProjectProject(models.Model):
     label_tickets = fields.Char(string='Use Tickets as', default='Tickets',
                                 help="Label used for the tickets of the project.", translate=True)
     tickets_count = fields.Integer(compute='_compute_ticket_count', string="Tickets Count")
+    
 
     def _compute_ticket_count(self):
         for project in self:
@@ -21,3 +22,17 @@ class ProjectProject(models.Model):
             .sudo().read()[0]
         action['display_name'] = self.name
         return action
+
+class ProjectTask(models.Model):
+    _inherit = 'project.task'
+    
+    custom_task_state = fields.Selection([
+        ('draft', 'Por Iniciar'),
+        ('revision', 'En Revisión'),
+        ('client_iteration', 'Iterando con Cliente'),
+        ('mblz_validate', 'Validado por Mobilize'),
+        ('partner_validate', 'Validado Cliente'),
+        ('block_request', 'Solicitud de Bloqueo'),
+    ], string='Estado de Avance', copy=False, tracking=True, help="")
+    
+    

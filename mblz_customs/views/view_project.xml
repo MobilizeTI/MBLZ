@@ -59,5 +59,16 @@
             </field>
         </record>
 
+        <record model="ir.ui.view" id="project_task_form">
+            <field name="name">project.task.form</field>
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="	project.view_task_form2" />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='parent_id']" position="before">
+                    <field name="custom_task_state" />
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>
