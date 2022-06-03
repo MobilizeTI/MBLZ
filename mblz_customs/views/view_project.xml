@@ -70,5 +70,16 @@
             </field>
         </record>
 
+        <record model="ir.ui.view" id="project_task_tree">
+            <field name="name">project.task.tree</field>
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="project.view_task_tree2" />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='activity_ids']" position="before">
+                    <field name="custom_task_state" />
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>
