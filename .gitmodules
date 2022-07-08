@@ -15,3 +15,7 @@
 	path = app_project_superbar
 	url = git@github.com:MobilizeDevTeam/app_project_superbar.git
 	branch = 15.0
+[submodule "knowledge"]
+	path = knowledge
+	url = git@github.com:MobilizeDevTeam/knowledge.git
+	branch = 15.5
