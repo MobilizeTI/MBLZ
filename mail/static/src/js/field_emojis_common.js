@@ -1,9 +1,8 @@
 /** @odoo-module **/
 
+import { debounce } from "@web/core/utils/timing";
 import emojis from '@mail/js/emojis';
 import MailEmojisMixin from '@mail/js/emojis_mixin';
-
-import basicFields from 'web.basic_fields';
 import core from 'web.core';
 
 var _onEmojiClickMixin = MailEmojisMixin._onEmojiClick;
@@ -19,7 +18,10 @@ var FieldEmojiCommon = {
      */
     init: function () {
         this._super.apply(this, arguments);
-        this._triggerOnchange = _.debounce(this._triggerOnchange, 2000);
+        if (this.nodeOptions.keydown_debounce_delay === undefined) {
+            this.nodeOptions.keydown_debounce_delay = 2000;
+        }
+        this._triggerOnchange = debounce(this._triggerOnchange, this.nodeOptions.keydown_debounce_delay);
         this.emojis = emojis;
     },
 
@@ -64,7 +66,7 @@ var FieldEmojiCommon = {
      * By default, the 'change' event is only triggered when the text element is blurred.
      *
      * We override this method because we want to update the value while
-     * the user is typing his message (and not only on blur).
+     * the user is typing their message (and not only on blur).
      *
      * @override
      * @private
@@ -91,8 +93,8 @@ var FieldEmojiCommon = {
 
     /**
      * Triggers the 'change' event to refresh the value.
-     * This method is debounced to run 2 seconds after typing ends.
-     * (to avoid spamming the server while the user is typing his message)
+     * This method is debounced to run after given debouce delay on typing ends.
+     * (to avoid spamming the server while the user is typing their message)
      *
      * @private
      */

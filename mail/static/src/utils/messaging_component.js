@@ -1,7 +1,8 @@
 /** @odoo-module */
 
-import { useModels } from "@mail/component_hooks/use_models/use_models";
-import { useShouldUpdateBasedOnProps } from "@mail/component_hooks/use_should_update_based_on_props/use_should_update_based_on_props";
+import { useModels } from '@mail/component_hooks/use_models';
+
+const { useRef } = owl;
 
 const componentRegistry = {};
 
@@ -14,11 +15,9 @@ const componentRegistry = {};
  *
  * @param {Component} ComponentClass the constructor of the component to be
  *      registered. Its name will be used as its key in the registry.
- * @param {Object} [param1]
- * @param {Object} [param1.propsCompareDepth] @see useShouldUpdateBasedOnProps
  */
-export function registerMessagingComponent(ComponentClass, { propsCompareDepth = {} } = {}) {
-    const { name, components } = ComponentClass;
+export function registerMessagingComponent(ComponentClass) {
+    const { defaultProps, components, name, props } = ComponentClass;
     if (componentRegistry[name]) {
         throw new Error(`There already is a registered component with the name "${name}"`);
     }
@@ -26,13 +25,24 @@ export function registerMessagingComponent(ComponentClass, { propsCompareDepth =
     // Defining the class in an object and immediately taking it out so that it
     // has "decoratedName" as its class name in stack traces and stuff.
     const MessagingClass = { [decoratedName]: class extends ComponentClass {
-        setup(...args) {
-            super.setup(...args);
-            // useModels must be defined after useRenderedValues, indeed records and
-            // fields accessed during useRenderedValues should be observed by
-            // useModels as if they were part of the OWL rendering itself.
+        setup() {
+            this.root = useRef('root');
             useModels();
-            useShouldUpdateBasedOnProps({ propsCompareDepth });
+            super.setup();
+        }
+        get className() {
+            let res = '';
+            if (this.props.className) {
+                res += this.props.className;
+            }
+            if (this.props.classNameObj) {
+                for (const [key, val] of Object.entries(this.props.classNameObj)) {
+                    if (val) {
+                        res += ' ' + key;
+                    }
+                }
+            }
+            return res;
         }
         get messaging() {
             return this.env.services.messaging.modelManager.messaging;
@@ -48,6 +58,29 @@ export function registerMessagingComponent(ComponentClass, { propsCompareDepth =
     // Component.components. This means that trying to get a value from this object will first look
     // into the original Component's components, and fall back on the registry if not found.
     MessagingClass.components = Object.assign(Object.create(componentRegistry), components);
+    MessagingClass.defaultProps = {
+        ...defaultProps,
+    };
+    MessagingClass.props = {
+        /**
+         * String that contains class names, separated by whitespace, that are
+         * part of classnames on root node of this messaging component.
+         */
+        className: {
+            type: String,
+            optional: true,
+        },
+        /**
+         * Object that contains class names (separated by whitespace) as key
+         * and truthy/falsy value as value. All classnames that have truthy
+         * value are part of classnames on root node of this messaging component.
+         */
+        classNameObj: {
+            type: Object,
+            optional: true,
+        },
+        ...props,
+    };
     componentRegistry[name] = MessagingClass;
 }
 

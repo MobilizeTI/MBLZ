@@ -108,13 +108,27 @@ function insertAndReplace(data = {}) {
 }
 
 /**
+ * Returns a insert-and-unlink command to give to the model manager at create/update.
+ * `insertAndUnlink` command can be used for relation fields.
+ * - Create new record(s) from data if the record(s) do not exist;
+ * - or update the record(s) if they can be found from identifying data;
+ * - and then unlink the record(s) from the relation field (if they were present).
+ *
+ * @param {Object|Object[]} [data={}] - data object or data objects array to insert and unlink record(s).
+ * @returns {FieldCommand}
+ */
+export function insertAndUnlink(data = {}) {
+    return new FieldCommand('insert-and-unlink', data);
+}
+
+/**
  * Returns a link command to give to the model manager at create/update.
  * `link` command can be used for relation fields.
  * - Set the field value `newValue` if current field value differs from `newValue` for an x2one field;
  * - Or add the record(s) given by `newValue` which are not in the currecnt field value
  * to the field value for an x2many field.
  *
- * @param {mail.model|mail.model[]} newValue - record or records array to be linked.
+ * @param {Record|Record[]} newValue - record or records array to be linked.
  * @returns {FieldCommand}
  */
 function link(newValue) {
@@ -130,7 +144,7 @@ function link(newValue) {
  * link the missing values, and then sort field value by the order they are given in `newValue`
  * for a x2many field.
  *
- * @param {mail.model|mail.model[]} newValue - record or records array to be replaced.
+ * @param {Record|Record[]} newValue - record or records array to be replaced.
  * @returns {FieldCommand}
  */
 function replace(newValue) {
@@ -155,7 +169,7 @@ function set(newValue) {
  * - or remove the record(s) given by `data` which are in the current field value
  *  for a x2many field.
  *
- * @param {mail.model|mail.model[]} [data] - record or records array to be unlinked.
+ * @param {Record|Record[]} [data] - record or records array to be unlinked.
  * `data` will be ignored if the field is x2one type.
  * @returns {FieldCommand}
  */

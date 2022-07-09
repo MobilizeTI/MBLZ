@@ -3,28 +3,37 @@
 import { _lt } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 
-const { Component } = owl;
-const { xml } = owl.tags;
+const { Component, xml } = owl;
 
 class DialogCommand extends Component {}
 DialogCommand.template = xml`
-    <div class="o_command_default">
-        <span t-esc="props.name"/>
-        <span t-if="props.email" t-esc="props.email"/>
+    <div class="o_command_default d-flex align-items-center justify-content-between px-4 py-2 o_cursor_pointer">
+        <t t-slot="name"/>
+        <span t-if="props.email" t-out="props.email"/>
     </div>
 `;
 
-const commandEmptyMessageRegistry = registry.category("command_empty_list");
-commandEmptyMessageRegistry.add("@", _lt("No user found"));
-commandEmptyMessageRegistry.add("#", _lt("No channel found"));
+const commandSetupRegistry = registry.category("command_setup");
+commandSetupRegistry.add("@", {
+    debounceDelay: 200,
+    emptyMessage: _lt("No user found"),
+    name: _lt("users"),
+    placeholder: _lt("Search for a user..."),
+});
+commandSetupRegistry.add("#", {
+    debounceDelay: 200,
+    emptyMessage: _lt("No channel found"),
+    name: _lt("channels"),
+    placeholder: _lt("Search for a channel..."),
+});
 
 const commandProviderRegistry = registry.category("command_provider");
 commandProviderRegistry.add("partner", {
     namespace: "@",
     async provide(newEnv, options) {
-        const messaging = await Component.env.services.messaging.get();
+        const messaging = await newEnv.services.messaging.get();
         const suggestions = [];
-        await messaging.models['mail.partner'].imSearch({
+        await messaging.models['Partner'].imSearch({
             callback(partners) {
                 partners.forEach((partner) => {
                     suggestions.push({
@@ -49,8 +58,8 @@ commandProviderRegistry.add("partner", {
 commandProviderRegistry.add("channel", {
     namespace: "#",
     async provide(newEnv, options) {
-        const messaging = await Component.env.services.messaging.get();
-        const channels = await messaging.models['mail.thread'].searchChannelsToOpen({
+        const messaging = await newEnv.services.messaging.get();
+        const channels = await messaging.models['Thread'].searchChannelsToOpen({
             limit: 10,
             searchTerm: options.searchValue,
         });

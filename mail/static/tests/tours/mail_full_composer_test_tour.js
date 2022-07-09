@@ -31,8 +31,10 @@ tour.register('mail/static/tests/tours/mail_full_composer_test_tour.js', {
             contentType: 'text/plain',
             name: 'text.txt',
         });
+        const messaging = await odoo.__DEBUG__.messaging;
+        const uploader = messaging.models['ComposerView'].all()[0].fileUploader;
         inputFiles(
-            document.querySelector('.o_FileUploader_input'),
+            uploader.fileInput,
             [file]
         );
     },

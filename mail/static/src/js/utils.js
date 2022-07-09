@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import core from 'web.core';
+import { escape } from '@web/core/utils/strings';
 
 var _t = core._t;
 
@@ -19,7 +20,7 @@ function parseAndTransform(htmlString, transformFunction) {
     var children;
     try {
         children = $('<div>').html(string).contents();
-    } catch (e) {
+    } catch (_e) {
         children = $('<div>').html('<pre>' + string + '</pre>').contents();
     }
     return _parseAndTransform(children, transformFunction)
@@ -98,7 +99,7 @@ function htmlToTextContentInline(htmlString) {
     htmlString = htmlString.replace(/<br\s*\/?>/gi,' ');
     try {
         div.innerHTML = htmlString;
-    } catch (e) {
+    } catch (_e) {
         div.innerHTML = `<pre>${htmlString}</pre>`;
     }
     return div
@@ -146,7 +147,7 @@ function parseEmail(text) {
  */
 function escapeAndCompactTextContent(content) {
     //Removing unwanted extra spaces from message
-    let value = owl.utils.escape(content).trim();
+    let value = escape(content).trim();
     value = value.replace(/(\r|\n){2,}/g, '<br/><br/>');
     value = value.replace(/(\r|\n)/g, '<br/>');
 

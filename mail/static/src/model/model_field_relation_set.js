@@ -3,6 +3,7 @@
 import { decrement, increment } from '@mail/model/model_field_command';
 import { Listener } from '@mail/model/model_listener';
 import { followRelations } from '@mail/model/model_utils';
+import { cleanSearchTerm } from '@mail/utils/utils';
 
 /**
  * Defines a set containing the relation records of the given field on the given
@@ -11,7 +12,7 @@ import { followRelations } from '@mail/model/model_utils';
 export class RelationSet {
 
     /**
-     * @param {mail.model} record
+     * @param {Record} record
      * @param {ModelField} field
      */
     constructor(record, field) {
@@ -67,10 +68,7 @@ export class RelationSet {
                             const valA = followRelations(a, relatedPath);
                             const valB = followRelations(b, relatedPath);
                             switch (compareMethod) {
-                                case 'defined-first': {
-                                    if (!valA && !valB) {
-                                        return 0;
-                                    }
+                                case 'truthy-first': {
                                     if (!valA) {
                                         return 1;
                                     }
@@ -79,17 +77,46 @@ export class RelationSet {
                                     }
                                     break;
                                 }
-                                case 'case-insensitive-asc':
-                                    if (valA.toLowerCase() === valB.toLowerCase()) {
+                                case 'falsy-first': {
+                                    if (!valA) {
+                                        return -1;
+                                    }
+                                    if (!valB) {
+                                        return 1;
+                                    }
+                                    break;
+                                }
+                                case 'case-insensitive-asc': {
+                                    if (typeof valA !== 'string' || typeof valB !== 'string') {
                                         break;
                                     }
-                                    return valA.toLowerCase() < valB.toLowerCase() ? -1 : 1;
+                                    const cleanedValA = cleanSearchTerm(valA);
+                                    const cleanedValB = cleanSearchTerm(valB);
+                                    if (cleanedValA === cleanedValB) {
+                                        break;
+                                    }
+                                    return cleanedValA < cleanedValB ? -1 : 1;
+                                }
                                 case 'smaller-first':
+                                    if (typeof valA !== 'number' || typeof valB !== 'number') {
+                                        break;
+                                    }
                                     if (valA === valB) {
                                         break;
                                     }
                                     return valA - valB;
                                 case 'greater-first':
+                                    if (typeof valA !== 'number' || typeof valB !== 'number') {
+                                        break;
+                                    }
+                                    if (valA === valB) {
+                                        break;
+                                    }
+                                    return valB - valA;
+                                case 'most-recent-first':
+                                    if (!(valA instanceof Date) || !(valB instanceof Date)) {
+                                        break;
+                                    }
                                     if (valA === valB) {
                                         break;
                                     }
