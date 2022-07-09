@@ -21,7 +21,8 @@ from odoo.exceptions import UserError, MissingError
 from odoo.modules.module import get_resource_path
 from odoo.tools import file_open
 from odoo.tools.mimetypes import guess_mimetype
-from odoo.tools.image import image_data_uri, binary_to_image
+from ..utils.image import image_data_uri, binary_to_image
+# from odoo.tools.image import image_data_uri, binary_to_image
 from odoo.addons.base.models.assetsbundle import AssetsBundle
 
 from ..models.ir_attachment import SUPPORTED_IMAGE_EXTENSIONS, SUPPORTED_IMAGE_MIMETYPES
