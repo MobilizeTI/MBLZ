@@ -104,7 +104,7 @@ class MailRtcSession(models.Model):
             vals.update({
                 'isCameraOn': self.is_camera_on,
                 'isDeaf': self.is_deaf,
-                'isSelfMuted': self.is_muted,
+                'isMuted': self.is_muted,
                 'isScreenSharingOn': self.is_screen_sharing_on,
             })
         if self.guest_id:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import _, api, exceptions, fields, models, modules, tools
+from odoo import _, api, exceptions, fields, models, modules
 from odoo.addons.base.models.res_users import is_selection_groups
 
 
@@ -22,35 +22,10 @@ class Users(models.Model):
         ('email', 'Handle by Emails'),
         ('inbox', 'Handle in Odoo')],
         'Notification', required=True, default='email',
-        compute='_compute_notification_type', store=True, readonly=False,
         help="Policy on how to handle Chatter notifications:\n"
              "- Handle by Emails: notifications are sent to your email address\n"
              "- Handle in Odoo: notifications appear in your Odoo Inbox")
     res_users_settings_ids = fields.One2many('res.users.settings', 'user_id')
-    # Provide a target for relateds that is not a x2Many field.
-    res_users_settings_id = fields.Many2one('res.users.settings', string="Settings", compute='_compute_res_users_settings_id', search='_search_res_users_settings_id')
-
-    _sql_constraints = [(
-        "notification_type",
-        "CHECK (notification_type = 'email' OR NOT share)",
-        "Only internal user can receive notifications in Odoo",
-    )]
-
-    @api.depends('share')
-    def _compute_notification_type(self):
-        for user in self:
-            # Only the internal users can receive notifications in Odoo
-            if user.share or not user.notification_type:
-                user.notification_type = 'email'
-
-    @api.depends('res_users_settings_ids')
-    def _compute_res_users_settings_id(self):
-        for user in self:
-            user.res_users_settings_id = user.res_users_settings_ids and user.res_users_settings_ids[0]
-
-    @api.model
-    def _search_res_users_settings_id(self, operator, operand):
-        return [('res_users_settings_ids', operator, operand)]
 
     # ------------------------------------------------------------
     # CRUD
@@ -148,34 +123,6 @@ class Users(models.Model):
             return '%s (%s)' % (body, self.partner_id.email)
         return body
 
-    def _deactivate_portal_user(self, **post):
-        """Blacklist the email of the user after deleting it.
-
-        Log a note on the related partner so we know why it's archived.
-        """
-        current_user = self.env.user
-        for user in self:
-            user.partner_id._message_log(
-                body=_('Archived because %(user_name)s (#%(user_id)s) deleted the portal account',
-                       user_name=current_user.name, user_id=current_user.id)
-            )
-
-        if post.get('request_blacklist'):
-            users_to_blacklist = self.filtered(
-                lambda user: tools.email_normalize(user.email))
-        else:
-            users_to_blacklist = []
-
-        super(Users, self)._deactivate_portal_user(**post)
-
-        for user in users_to_blacklist:
-            blacklist = self.env['mail.blacklist']._add(user.email)
-            blacklist._message_log(
-                body=_('Blocked by deletion of portal account %(portal_user_name)s by %(user_name)s (#%(user_id)s)',
-                       user_name=current_user.name, user_id=current_user.id,
-                       portal_user_name=user.name),
-            )
-
     # ------------------------------------------------------------
     # DISCUSS
     # ------------------------------------------------------------
@@ -190,11 +137,12 @@ class Users(models.Model):
             'current_partner': self.partner_id.mail_partner_format().get(self.partner_id),
             'current_user_id': self.id,
             'current_user_settings': self.env['res.users.settings']._find_or_create_for_user(self)._res_users_settings_format(),
+            'mail_failures': [],
             'menu_id': self.env['ir.model.data']._xmlid_to_res_id('mail.menu_root_discuss'),
             'needaction_inbox_counter': self.partner_id._get_needaction_count(),
             'partner_root': partner_root.sudo().mail_partner_format().get(partner_root),
-            'publicPartners': [('insert', [{'id': p.id} for p in self.env.ref('base.group_public').sudo().with_context(active_test=False).users.partner_id])],
-            'shortcodes': self.env['mail.shortcode'].sudo().search_read([], ['source', 'substitution']),
+            'public_partners': list(self.env.ref('base.group_public').sudo().with_context(active_test=False).users.partner_id.mail_partner_format().values()),
+            'shortcodes': self.env['mail.shortcode'].sudo().search_read([], ['source', 'substitution', 'description']),
             'starred_counter': self.partner_id._get_starred_count(),
         }
         return values

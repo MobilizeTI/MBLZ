@@ -35,7 +35,7 @@ class Partner(models.Model):
     def _get_needaction_count(self):
         """ compute the number of needaction of the current partner """
         self.ensure_one()
-        self.env['mail.notification'].flush_model(['is_read', 'res_partner_id'])
+        self.env['mail.notification'].flush(['is_read', 'res_partner_id'])
         self.env.cr.execute("""
             SELECT count(*) as needaction_count
             FROM mail_notification R
@@ -128,14 +128,14 @@ class Partner(models.Model):
         """Returns first 100 messages, sent by the current partner, that have errors, in
         the format expected by the web client."""
         self.ensure_one()
-        notifications = self.env['mail.notification'].search([
+        messages = self.env['mail.message'].search([
+            ('has_error', '=', True),
             ('author_id', '=', self.id),
-            ('notification_status', 'in', ('bounce', 'exception')),
-            ('mail_message_id.message_type', '!=', 'user_notification'),
-            ('mail_message_id.model', '!=', False),
-            ('mail_message_id.res_id', '!=', 0),
+            ('res_id', '!=', 0),
+            ('model', '!=', False),
+            ('message_type', '!=', 'user_notification')
         ], limit=100)
-        return notifications.mail_message_id._message_notification_format()
+        return messages._message_notification_format()
 
     def _get_channels_as_member(self):
         """Returns the channels of the partner."""
@@ -197,7 +197,7 @@ class Partner(models.Model):
         search_dom = expression.AND([[('active', '=', True), ('type', '!=', 'private')], search_dom])
         if channel_id:
             search_dom = expression.AND([[('channel_ids', 'in', channel_id)], search_dom])
-        domain_is_user = expression.AND([[('user_ids', '!=', False), ('user_ids.active', '=', True)], search_dom])
+        domain_is_user = expression.AND([[('user_ids.id', '!=', False), ('user_ids.active', '=', True)], search_dom])
         priority_conditions = [
             expression.AND([domain_is_user, [('partner_share', '=', False)]]),  # Search partners that are internal users
             domain_is_user,  # Search partners that are users

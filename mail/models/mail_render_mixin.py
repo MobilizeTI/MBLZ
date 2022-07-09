@@ -11,7 +11,7 @@ from markupsafe import Markup
 from werkzeug import urls
 
 from odoo import _, api, fields, models, tools
-from odoo.addons.base.models.ir_qweb import QWebException
+from odoo.addons.base.models.qweb import QWebCodeFound
 from odoo.exceptions import UserError, AccessError
 from odoo.tools import is_html_empty, safe_eval
 from odoo.tools.rendering_tools import convert_inline_template_to_qweb, parse_inline_template, render_inline_template, template_env_globals
@@ -192,20 +192,25 @@ class MailRenderMixin(models.AbstractModel):
 
     @api.model
     def _render_encapsulate(self, layout_xmlid, html, add_context=None, context_record=None):
-        template_ctx = {
-            'body': html,
-            'record_name': context_record.display_name if context_record else '',
-            'model_description': self.env['ir.model']._get(context_record._name).display_name if context_record else False,
-            'company': context_record['company_id'] if (context_record and 'company_id' in context_record) else self.env.company,
-            'record': context_record,
-        }
-        if add_context:
-            template_ctx.update(**add_context)
-
-        html = self.env['ir.qweb']._render(layout_xmlid, template_ctx, minimal_qcontext=True, raise_if_not_found=False)
-        if not html:
+        try:
+            template = self.env.ref(layout_xmlid, raise_if_not_found=True)
+        except ValueError:
             _logger.warning('QWeb template %s not found when rendering encapsulation template.' % (layout_xmlid))
-        html = self.env['mail.render.mixin']._replace_local_links(html)
+        else:
+            record_name = context_record.display_name if context_record else ''
+            model_description = self.env['ir.model']._get(context_record._name).display_name if context_record else False
+            template_ctx = {
+                'body': html,
+                'record_name': record_name,
+                'model_description': model_description,
+                'company': context_record['company_id'] if (context_record and 'company_id' in context_record) else self.env.company,
+                'record': context_record,
+            }
+            if add_context:
+                template_ctx.update(**add_context)
+
+            html = template._render(template_ctx, engine='ir.qweb', minimal_qcontext=True)
+            html = self.env['mail.render.mixin']._replace_local_links(html)
         return html
 
     @api.model
@@ -253,11 +258,9 @@ class MailRenderMixin(models.AbstractModel):
         if template_src:
             try:
                 node = html.fragment_fromstring(template_src, create_parent='div')
-                self.env["ir.qweb"].with_context(raise_on_code=True)._compile(node)
-            except QWebException as e:
-                if isinstance(e.__cause__, PermissionError):
-                    return True
-                raise
+                self.env["ir.qweb"]._compile(node, options={'raise_on_code': True})
+            except QWebCodeFound:
+                return True
         return False
 
     @api.model
@@ -334,22 +337,21 @@ class MailRenderMixin(models.AbstractModel):
                     html.fragment_fromstring(template_src, create_parent='div'),
                     variables,
                     raise_on_code=is_restricted,
-                    **(options or {})
                 )
                 # remove the rendered tag <div> that was added in order to wrap potentially multiples nodes into one.
                 render_result = render_result[5:-6]
+            except QWebCodeFound:
+                group = self.env.ref('mail.group_mail_template_editor')
+                raise AccessError(_('Only users belonging to the "%s" group can modify dynamic templates.', group.name))
             except Exception as e:
-                if isinstance(e, QWebException) and isinstance(e.__cause__, PermissionError):
-                    group = self.env.ref('mail.group_mail_template_editor')
-                    raise AccessError(_('Only users belonging to the "%s" group can modify dynamic templates.', group.name)) from e
                 _logger.info("Failed to render template : %s", template_src, exc_info=True)
-                raise UserError(_("Failed to render QWeb template : %s)", template_src)) from e
+                raise UserError(_("Failed to render QWeb template : %s)", e))
             results[record.id] = render_result
 
         return results
 
     @api.model
-    def _render_template_qweb_view(self, view_xmlid, model, res_ids,
+    def _render_template_qweb_view(self, template_src, model, res_ids,
                                    add_context=None, options=None):
         """ Render a QWeb template based on an ir.ui.view content.
 
@@ -357,7 +359,7 @@ class MailRenderMixin(models.AbstractModel):
         variables are added:
           * ``object``: record based on which the template is rendered;
 
-        :param str view_xmlid: source QWeb template. It should be a string
+        :param str template_src: source QWeb template. It should be a string
           XmlID allowing to fetch an ``ir.ui.view``;
         :param str model: see ``MailRenderMixin._render_template()``;
         :param list res_ids: see ``MailRenderMixin._render_template()``;
@@ -373,21 +375,27 @@ class MailRenderMixin(models.AbstractModel):
         if any(r is None for r in res_ids):
             raise ValueError(_('Template rendering should be called on a valid record IDs.'))
 
-        results = {}
+        view = self.env.ref(template_src, raise_if_not_found=False) or self.env['ir.ui.view']
+        results = dict.fromkeys(res_ids, u"")
+        if not view:
+            return results
 
         # prepare template variables
         variables = self._render_eval_context()
         if add_context:
             variables.update(**add_context)
+        safe_eval.check_values(variables)
 
         for record in self.env[model].browse(res_ids):
             variables['object'] = record
             try:
-                render_result = self.env['ir.qweb']._render(view_xmlid, variables, minimal_qcontext=True, raise_if_not_found=False, **(options or {}))
-                results[record.id] = render_result
+                render_result = view._render(variables, engine='ir.qweb', minimal_qcontext=True)
             except Exception as e:
-                _logger.info("Failed to render template : %s", view_xmlid, exc_info=True)
-                raise UserError(_("Failed to render template : %s") % view_xmlid)
+                _logger.info("Failed to render template : %s (%d)", template_src, view.id, exc_info=True)
+                raise UserError(_("Failed to render template : %(xml_id)s (%(view_id)d)",
+                                  xml_id=template_src,
+                                  view_id=view.id))
+            results[record.id] = render_result
 
         return results
 

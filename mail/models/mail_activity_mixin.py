@@ -261,9 +261,7 @@ class MailActivityMixin(models.AbstractModel):
         # explicitly check access rights, since we bypass the ORM
         self.check_access_rights('read')
         self._flush_search(domain, fields=[group_by_fname], order='id')
-        self.env['mail.activity'].flush_model(['res_model', 'res_id', 'user_id', 'date_deadline'])
-        self.env['res.users'].flush_model(['partner_id'])
-        self.env['res.partner'].flush_model(['tz'])
+        self.env['mail.activity'].flush(['res_model', 'res_id', 'user_id', 'date_deadline'])
 
         query = self._where_calc(domain)
         self._apply_ir_rules(query, 'read')
@@ -437,12 +435,17 @@ class MailActivityMixin(models.AbstractModel):
         if self.env.context.get('mail_activity_automation_skip'):
             return False
 
-        view_ref = views_or_xmlid.id if isinstance(views_or_xmlid, models.BaseModel) else views_or_xmlid
         render_context = render_context or dict()
+        if isinstance(views_or_xmlid, str):
+            views = self.env.ref(views_or_xmlid, raise_if_not_found=False)
+        else:
+            views = views_or_xmlid
+        if not views:
+            return
         activities = self.env['mail.activity']
         for record in self:
             render_context['object'] = record
-            note = self.env['ir.qweb']._render(view_ref, render_context, minimal_qcontext=True, raise_if_not_found=False)
+            note = views._render(render_context, engine='ir.qweb', minimal_qcontext=True)
             activities |= record.activity_schedule(act_type_xmlid=act_type_xmlid, date_deadline=date_deadline, summary=summary, note=note, **act_values)
         return activities
 
@@ -472,7 +475,7 @@ class MailActivityMixin(models.AbstractModel):
             activities.write(write_vals)
         return activities
 
-    def activity_feedback(self, act_type_xmlids, user_id=None, feedback=None, attachment_ids=None):
+    def activity_feedback(self, act_type_xmlids, user_id=None, feedback=None):
         """ Set activities as done, limiting to some activity types and
         optionally to a given user. """
         if self.env.context.get('mail_activity_automation_skip'):
@@ -485,7 +488,7 @@ class MailActivityMixin(models.AbstractModel):
             return False
         activities = self.activity_search(act_type_xmlids, user_id=user_id)
         if activities:
-            activities.action_feedback(feedback=feedback, attachment_ids=attachment_ids)
+            activities.action_feedback(feedback=feedback)
         return True
 
     def activity_unlink(self, act_type_xmlids, user_id=None):

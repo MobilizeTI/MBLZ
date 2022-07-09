@@ -77,7 +77,7 @@ class MailController(http.Controller):
                     record_sudo.with_user(uid).with_context(allowed_company_ids=cids).check_access_rule('read')
                 except AccessError:
                     # In case the allowed_company_ids from the cookies (i.e. the last user configuration
-                    # on their browser) is not sufficient to avoid an ir.rule access error, try to following
+                    # on his browser) is not sufficient to avoid an ir.rule access error, try to following
                     # heuristic:
                     # - Guess the supposed necessary company to access the record via the method
                     #   _get_mail_redirect_suggested_company
@@ -93,9 +93,9 @@ class MailController(http.Controller):
             except AccessError:
                 return cls._redirect_to_messaging()
             else:
-                record_action = record_sudo._get_access_action(access_uid=uid)
+                record_action = record_sudo.get_access_action(access_uid=uid)
         else:
-            record_action = record_sudo._get_access_action()
+            record_action = record_sudo.get_access_action()
             if record_action['type'] == 'ir.actions.act_url' and record_action.get('target_type') != 'public':
                 url_params = {
                     'model': model,

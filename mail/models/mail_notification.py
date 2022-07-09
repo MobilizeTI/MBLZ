@@ -16,7 +16,6 @@ class MailNotification(models.Model):
     _description = 'Message Notifications'
 
     # origin
-    author_id = fields.Many2one('res.partner', 'Author', ondelete='set null')
     mail_message_id = fields.Many2one('mail.message', 'Message', index=True, ondelete='cascade', required=True)
     mail_mail_id = fields.Many2one('mail.mail', 'Mail', index=True, help='Optional mail_mail ID. Used mainly to optimize searches.')
     # recipient
@@ -39,13 +38,13 @@ class MailNotification(models.Model):
         ("unknown", "Unknown error"),
         # mail
         ("mail_email_invalid", "Invalid email address"),
-        ("mail_email_missing", "Missing email address"),
+        ("mail_email_missing", "Missing email addresss"),
         ("mail_smtp", "Connection failed (outgoing mail server problem)"),
         ], string='Failure type')
     failure_reason = fields.Text('Failure reason', copy=False)
 
     _sql_constraints = [
-        # email notification: partner is required
+        # email notification;: partner is required
         ('notification_partner_required',
          "CHECK(notification_type NOT IN ('email', 'inbox') OR res_partner_id IS NOT NULL)",
          'Customer is required for inbox / email notification'),
@@ -58,16 +57,8 @@ class MailNotification(models.Model):
     def init(self):
         self._cr.execute("""
             CREATE INDEX IF NOT EXISTS mail_notification_res_partner_id_is_read_notification_status_mail_message_id
-                                    ON mail_notification (res_partner_id, is_read, notification_status, mail_message_id);
-            CREATE INDEX IF NOT EXISTS mail_notification_author_id_notification_status_failure
-                                    ON mail_notification (author_id, notification_status)
-                                 WHERE notification_status IN ('bounce', 'exception');
+                                    ON mail_notification (res_partner_id, is_read, notification_status, mail_message_id)
         """)
-        self.env.cr.execute(
-            """CREATE UNIQUE INDEX IF NOT EXISTS unique_mail_message_id_res_partner_id_if_set
-                                              ON %s (mail_message_id, res_partner_id)
-                                           WHERE res_partner_id IS NOT NULL""" % self._table
-        )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -113,14 +104,10 @@ class MailNotification(models.Model):
 
     def _filtered_for_web_client(self):
         """Returns only the notifications to show on the web client."""
-        def _filter_unimportant_notifications(notif):
-            if notif.notification_status in ['bounce', 'exception', 'canceled'] \
-                    or notif.res_partner_id.partner_share:
-                return True
-            subtype = notif.mail_message_id.subtype_id
-            return not subtype or subtype.track_recipients
-
-        return self.filtered(_filter_unimportant_notifications)
+        return self.filtered(lambda n:
+            n.notification_type != 'inbox' and
+            (n.notification_status in ['bounce', 'exception', 'canceled'] or n.res_partner_id.partner_share)
+        )
 
     def _notification_format(self):
         """Returns the current notifications in the format expected by the web

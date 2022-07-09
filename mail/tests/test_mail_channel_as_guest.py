@@ -16,21 +16,22 @@ class TestMailPublicPage(HttpCase):
             'name': 'Test channel',
             'public': 'public',
         })
+        self.route = f"/chat/{self.channel.id}/{self.channel.uuid}"
         self.tour = "mail/static/tests/tours/discuss_public_tour.js"
 
     def _open_channel_page_as_user(self, login):
-        self.start_tour(self.channel.invitation_url, self.tour, login=login)
+        self.start_tour(self.route, self.tour, login=login)
         # Second run of the tour as the first call has side effects, like creating user settings or adding members to
         # the channel, so we need to run it again to test different parts of the code.
-        self.start_tour(self.channel.invitation_url, self.tour, login=login)
+        self.start_tour(self.route, self.tour, login=login)
 
     def test_mail_channel_public_page_as_admin(self):
         self._open_channel_page_as_user('admin')
 
     def test_mail_channel_public_page_as_guest(self):
-        self.start_tour(self.channel.invitation_url, "mail/static/tests/tours/mail_channel_as_guest_tour.js")
+        self.start_tour(self.route, "mail/static/tests/tours/mail_channel_as_guest_tour.js")
         guest = self.env['mail.guest'].search([('channel_ids', 'in', self.channel.id)], limit=1, order='id desc')
-        self.start_tour(self.channel.invitation_url, self.tour, cookies={guest._cookie_name: f"{guest.id}{guest._cookie_separator}{guest.access_token}"})
+        self.start_tour(self.route, self.tour, cookies={guest._cookie_name: f"{guest.id}{guest._cookie_separator}{guest.access_token}"})
 
     def test_mail_channel_public_page_as_internal(self):
         self._open_channel_page_as_user('demo')

@@ -20,7 +20,6 @@ from . import mail_activity_type
 from . import mail_activity
 from . import mail_blacklist
 from . import mail_followers
-from . import mail_gateway_allowed
 from . import mail_message_reaction
 from . import mail_message_subtype
 from . import mail_message
@@ -49,7 +48,6 @@ from . import ir_model
 from . import ir_model_fields
 from . import ir_translation
 from . import ir_ui_view
-from . import ir_qweb
 from . import res_company
 from . import res_config_settings
 from . import res_partner

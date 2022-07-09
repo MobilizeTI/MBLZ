@@ -87,7 +87,8 @@ export class ModelField {
         /**
          * This prop only makes sense in a relational field. Determine which
          * type of relation there is between current record and other records.
-         * 2 types of relation are supported: 'many', 'one'.
+         * 4 types of relation are supported: 'one2one', 'one2many', 'many2one'
+         * and 'many2many'.
          */
         this.relationType = relationType;
         /**
@@ -145,25 +146,47 @@ export class ModelField {
     }
 
     /**
-     * Define a many field.
+     * Define a many2many field.
      *
      * @param {string} modelName
      * @param {Object} [options]
      * @returns {Object}
      */
-    static many(modelName, options) {
-        return ModelField._relation(modelName, Object.assign({}, options, { relationType: 'many' }));
+    static many2many(modelName, options) {
+        return ModelField._relation(modelName, Object.assign({}, options, { relationType: 'many2many' }));
     }
 
     /**
-     * Define a one field.
+     * Define a many2one field.
      *
      * @param {string} modelName
      * @param {Object} [options]
      * @returns {Object}
      */
-    static one(modelName, options) {
-        return ModelField._relation(modelName, Object.assign({}, options, { relationType: 'one' }));
+    static many2one(modelName, options) {
+        return ModelField._relation(modelName, Object.assign({}, options, { relationType: 'many2one' }));
+    }
+
+    /**
+     * Define a one2many field.
+     *
+     * @param {string} modelName
+     * @param {Object} [options]
+     * @returns {Object}
+     */
+    static one2many(modelName, options) {
+        return ModelField._relation(modelName, Object.assign({}, options, { relationType: 'one2many' }));
+    }
+
+    /**
+     * Define a one2one field.
+     *
+     * @param {string} modelName
+     * @param {Object} [options]
+     * @returns {Object}
+     */
+    static one2one(modelName, options) {
+        return ModelField._relation(modelName, Object.assign({}, options, { relationType: 'one2one' }));
     }
 
     /**
@@ -173,7 +196,7 @@ export class ModelField {
      * default value. Relational fields are always unlinked before the default
      * is applied.
      *
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {options} [options]
      * @returns {boolean} whether the value changed for the current field
      */
@@ -197,13 +220,13 @@ export class ModelField {
      * Compute method when this field is related.
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      */
     computeRelated(record) {
         const [relationName, relatedFieldName] = this.related.split('.');
-        const model = record.constructor;
-        const relationField = model.__fieldMap[relationName];
-        if (relationField.relationType === 'many') {
+        const Model = record.constructor;
+        const relationField = Model.__fieldMap[relationName];
+        if (['one2many', 'many2many'].includes(relationField.relationType)) {
             const newVal = [];
             for (const otherRecord of record[relationName]) {
                 const otherValue = otherRecord[relatedFieldName];
@@ -259,7 +282,7 @@ export class ModelField {
      * Decreases the field value by `amount`
      * for an attribute field holding number value,
      *
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {number} amount
      */
     decrement(record, amount) {
@@ -271,7 +294,7 @@ export class ModelField {
      * Get the value associated to this field. Relations must convert record
      * local ids to records.
      *
-     * @param {Record} record
+     * @param {mail.model} record
      * @returns {any}
      */
     get(record) {
@@ -279,7 +302,7 @@ export class ModelField {
             return this.read(record);
         }
         if (this.fieldType === 'relation') {
-            if (this.relationType === 'one') {
+            if (['one2one', 'many2one'].includes(this.relationType)) {
                 return this.read(record);
             }
             return [...this.read(record)];
@@ -291,7 +314,7 @@ export class ModelField {
      * Increases the field value by `amount`
      * for an attribute field holding number value.
      *
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {number} amount
      */
     increment(record, amount) {
@@ -302,7 +325,7 @@ export class ModelField {
     /**
      * Parses newVal for command(s) and executes them.
      *
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {any} newVal
      * @param {Object} [options]
      * @param {boolean} [options.hasToUpdateInverse] whether updating the
@@ -340,7 +363,7 @@ export class ModelField {
                         }
                         break;
                     default:
-                        throw new Error(`Field "${record.constructor.name}/${this.fieldName}"(${this.fieldType} type) does not support command "${commandName}"`);
+                        throw new Error(`Field "${record.constructor.modelName}/${this.fieldName}"(${this.fieldType} type) does not support command "${commandName}"`);
                 }
             } else if (this.fieldType === 'relation') {
                 switch (commandName) {
@@ -385,7 +408,7 @@ export class ModelField {
                         }
                         break;
                     default:
-                        throw new Error(`Field "${record.constructor.name}/${this.fieldName}"(${this.fieldType} type) does not support command "${commandName}"`);
+                        throw new Error(`Field "${record.constructor.modelName}/${this.fieldName}"(${this.fieldType} type) does not support command "${commandName}"`);
                 }
             }
         }
@@ -396,7 +419,7 @@ export class ModelField {
      * Get the raw value associated to this field. For relations, this means
      * the local id or list of local ids of records in this relational field.
      *
-     * @param {Record} record
+     * @param {mail.model} record
      * @returns {any}
      */
     read(record) {
@@ -431,11 +454,11 @@ export class ModelField {
      * an iterable of records.
      *
      * @private
-     * @param {Record|Record[]} newValue
+     * @param {mail.model|mail.model[]} newValue
      * @param {Object} [param1={}]
      * @param {boolean} [param1.hasToVerify=true] whether the value has to be
      *  verified @see `_verifyRelationalValue`
-     * @returns {Record[]}
+     * @returns {mail.model[]}
      */
     _convertX2ManyValue(newValue, { hasToVerify = true } = {}) {
         if (typeof newValue[Symbol.iterator] === 'function') {
@@ -457,25 +480,24 @@ export class ModelField {
      * field based on the given data and the inverse relation value.
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {Object|Object[]} data
-     * @returns {Record|Record[]}
+     * @returns {mail.model|mail.model[]}
      */
     _insertOtherRecord(record, data) {
-        const otherModel = record.models[this.to];
-        const otherField = otherModel.__fieldMap[this.inverse];
+        const OtherModel = record.models[this.to];
         const isMulti = typeof data[Symbol.iterator] === 'function';
         const dataList = [];
         for (const recordData of (isMulti ? data : [data])) {
             const recordData2 = { ...recordData };
-            if (otherField.relationType === 'one') {
+            if (['one2one', 'one2many'].includes(this.relationType)) {
                 recordData2[this.inverse] = replace(record);
             } else {
                 recordData2[this.inverse] = link(record);
             }
             dataList.push(recordData2);
         }
-        const records = record.modelManager._insert(otherModel, dataList);
+        const records = record.modelManager._insert(OtherModel, dataList);
         return isMulti ? records : records[0];
     }
 
@@ -483,7 +505,7 @@ export class ModelField {
      *  Set a value for this attribute field
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {any} newVal value to be written on the field value.
      * @returns {boolean} whether the value changed for the current field
      */
@@ -503,7 +525,7 @@ export class ModelField {
      * this field.
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {Object|Object[]} data
      * @param {Object} [options]
      * @returns {boolean} whether the value changed for the current field
@@ -519,7 +541,7 @@ export class ModelField {
      * records, which themselves must replace value on this field.
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {Object|Object[]} data
      * @param {Object} [options]
      * @returns {boolean} whether the value changed for the current field
@@ -535,7 +557,7 @@ export class ModelField {
      * records, which themselves must be unlinked from this field.
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {Object|Object[]} data
      * @param {Object} [options]
      * @returns {boolean} whether the value changed for the current field
@@ -549,15 +571,17 @@ export class ModelField {
      * Set a 'link' operation on this relational field.
      *
      * @private
-     * @param {Record|Record[]} newValue
+     * @param {mail.model|mail.model[]} newValue
      * @param {Object} [options]
      * @returns {boolean} whether the value changed for the current field
      */
     _setRelationLink(record, newValue, options) {
         switch (this.relationType) {
-            case 'many':
+            case 'many2many':
+            case 'one2many':
                 return this._setRelationLinkX2Many(record, newValue, options);
-            case 'one':
+            case 'many2one':
+            case 'one2one':
                 return this._setRelationLinkX2One(record, newValue, options);
         }
     }
@@ -566,8 +590,8 @@ export class ModelField {
      * Handling of a `set` 'link' of a x2many relational field.
      *
      * @private
-     * @param {Record} record
-     * @param {Record|Record[]} newValue
+     * @param {mail.model} record
+     * @param {mail.model|mail.model[]} newValue
      * @param {Object} [param2={}]
      * @param {boolean} [param2.hasToUpdateInverse=true] whether updating the
      *  current field should also update its inverse field. Typically set to
@@ -605,8 +629,8 @@ export class ModelField {
      * Handling of a `set` 'link' of an x2one relational field.
      *
      * @private
-     * @param {Record} record
-     * @param {Record} recordToLink
+     * @param {mail.model} record
+     * @param {mail.model} recordToLink
      * @param {Object} [param2={}]
      * @param {boolean} [param2.hasToUpdateInverse=true] whether updating the
      *  current field should also update its inverse field. Typically set to
@@ -642,13 +666,13 @@ export class ModelField {
      * Set a 'replace' operation on this relational field.
      *
      * @private
-     * @param {Record} record
-     * @param {Record|Record[]} newValue
+     * @param {mail.model} record
+     * @param {mail.model|mail.model[]} newValue
      * @param {Object} [options]
      * @returns {boolean} whether the value changed for the current field
      */
     _setRelationReplace(record, newValue, options) {
-        if (this.relationType === 'one') {
+        if (['one2one', 'many2one'].includes(this.relationType)) {
             // for x2one replace is just link
             return this._setRelationLinkX2One(record, newValue, options);
         }
@@ -707,16 +731,18 @@ export class ModelField {
      * Set an 'unlink' operation on this relational field.
      *
      * @private
-     * @param {Record} record
-     * @param {Record|Record[]} newValue
+     * @param {mail.model} record
+     * @param {mail.model|mail.model[]} newValue
      * @param {Object} [options]
      * @returns {boolean} whether the value changed for the current field
      */
     _setRelationUnlink(record, newValue, options) {
         switch (this.relationType) {
-            case 'many':
+            case 'many2many':
+            case 'one2many':
                 return this._setRelationUnlinkX2Many(record, newValue, options);
-            case 'one':
+            case 'many2one':
+            case 'one2one':
                 return this._setRelationUnlinkX2One(record, options);
         }
     }
@@ -725,8 +751,8 @@ export class ModelField {
      * Handling of a `set` 'unlink' of a x2many relational field.
      *
      * @private
-     * @param {Record} record
-     * @param {Record|Record[]} newValue
+     * @param {mail.model} record
+     * @param {mail.model|mail.model[]} newValue
      * @param {Object} [param2={}]
      * @param {boolean} [param2.hasToUpdateInverse=true] whether updating the
      *  current field should also update its inverse field. Typically set to
@@ -777,7 +803,7 @@ export class ModelField {
      * Handling of a `set` 'unlink' of a x2one relational field.
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @param {Object} [param1={}]
      * @param {boolean} [param1.hasToUpdateInverse=true] whether updating the
      *  current field should also update its inverse field. Typically set to
@@ -822,7 +848,7 @@ export class ModelField {
      * and it must originates from relational `to` model (or its subclasses).
      *
      * @private
-     * @param {Record} record
+     * @param {mail.model} record
      * @throws {Error} if record does not satisfy related model
      */
     _verifyRelationalValue(record) {
@@ -832,8 +858,8 @@ export class ModelField {
         if (!record.modelManager) {
             throw Error(`${record} is not a record. Did you try to use link() instead of insert() with data?`);
         }
-        const otherModel = record.modelManager.models[this.to];
-        if (!otherModel.get(record.localId, { isCheckingInheritance: true })) {
+        const OtherModel = record.modelManager.models[this.to];
+        if (!OtherModel.get(record.localId, { isCheckingInheritance: true })) {
             throw Error(`Record ${record.localId} is not valid for relational field ${this.fieldName}.`);
         }
     }
@@ -841,5 +867,7 @@ export class ModelField {
 }
 
 export const attr = ModelField.attr;
-export const many = ModelField.many;
-export const one = ModelField.one;
+export const many2many = ModelField.many2many;
+export const many2one = ModelField.many2one;
+export const one2many = ModelField.one2many;
+export const one2one = ModelField.one2one;

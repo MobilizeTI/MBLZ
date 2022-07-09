@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import odoo
 from odoo import models
+from odoo.addons.web.controllers.main import HomeStaticTemplateHelpers
 from odoo.http import request
-from odoo.addons.web.controllers.utils import HomeStaticTemplateHelpers
 
 
 class IrHttp(models.AbstractModel):
@@ -12,7 +13,7 @@ class IrHttp(models.AbstractModel):
     def session_info(self):
         user = request.env.user
         result = super(IrHttp, self).session_info()
-        if self.env.user._is_internal():
+        if self.env.user.has_group('base.group_user'):
             result['notification_type'] = user.notification_type
         assets_discuss_public_hash = HomeStaticTemplateHelpers.get_qweb_templates_checksum(debug=request.session.debug, bundle='mail.assets_discuss_public')
         result['cache_hashes']['assets_discuss_public'] = assets_discuss_public_hash

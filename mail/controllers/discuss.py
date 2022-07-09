@@ -97,7 +97,7 @@ class DiscussController(http.Controller):
                     if channel_sudo.public == 'groups':
                         raise NotFound()
                     guest = channel_sudo.env['mail.guest'].create({
-                        'country_id': channel_sudo.env['res.country'].search([('code', '=', request.geoip.get('country_code'))], limit=1).id,
+                        'country_id': channel_sudo.env['res.country'].search([('code', '=', request.session.get('geoip', {}).get('country_code'))], limit=1).id,
                         'lang': get_lang(channel_sudo.env).code,
                         'name': _("Guest"),
                         'timezone': channel_sudo.env['mail.guest']._get_timezone_from_request(request),
@@ -136,36 +136,29 @@ class DiscussController(http.Controller):
     @http.route('/mail/channel/<int:channel_id>/partner/<int:partner_id>/avatar_128', methods=['GET'], type='http', auth='public')
     def mail_channel_partner_avatar_128(self, channel_id, partner_id, **kwargs):
         channel_partner_sudo = request.env['mail.channel.partner']._get_as_sudo_from_request(request=request, channel_id=channel_id)
-        partner_sudo = channel_partner_sudo.env['res.partner'].browse(partner_id).exists()
-        placeholder = partner_sudo._avatar_get_placeholder_path()
-        if channel_partner_sudo and channel_partner_sudo.env['mail.channel.partner'].search([('channel_id', '=', channel_id), ('partner_id', '=', partner_id)], limit=1):
-            return request.env['ir.binary']._get_image_stream_from(partner_sudo, field_name='avatar_128', placeholder=placeholder).get_response()
-        if request.env.user.share:
-            return request.env['ir.binary']._get_placeholder_stream(placeholder)
-        return request.env['ir.binary']._get_image_stream_from(partner_sudo.sudo(False), field_name='avatar_128', placeholder=placeholder).get_response()
+        if not channel_partner_sudo or not channel_partner_sudo.env['mail.channel.partner'].search([('channel_id', '=', channel_id), ('partner_id', '=', partner_id)], limit=1):
+            if request.env.user.share:
+                placeholder = channel_partner_sudo.env['res.partner'].browse(partner_id).exists()._avatar_get_placeholder()
+                return channel_partner_sudo.env['ir.http']._placeholder_image_get_response(placeholder)
+            return channel_partner_sudo.sudo(False).env['ir.http']._content_image(model='res.partner', res_id=partner_id, field='avatar_128')
+        return channel_partner_sudo.env['ir.http']._content_image(model='res.partner', res_id=partner_id, field='avatar_128')
 
     @http.route('/mail/channel/<int:channel_id>/guest/<int:guest_id>/avatar_128', methods=['GET'], type='http', auth='public')
     def mail_channel_guest_avatar_128(self, channel_id, guest_id, **kwargs):
         channel_partner_sudo = request.env['mail.channel.partner']._get_as_sudo_from_request(request=request, channel_id=channel_id)
-        guest_sudo = channel_partner_sudo.env['mail.guest'].browse(guest_id).exists()
-        placeholder = guest_sudo._avatar_get_placeholder_path()
-        if channel_partner_sudo and channel_partner_sudo.env['mail.channel.partner'].search([('channel_id', '=', channel_id), ('guest_id', '=', guest_id)], limit=1):
-            return request.env['ir.binary']._get_image_stream_from(guest_sudo, field_name='avatar_128', placeholder=placeholder).get_response()
-        if request.env.user.share:
-            return request.env['ir.binary']._get_placeholder_stream(placeholder)
-        return request.env['ir.binary']._get_image_stream_from(guest_sudo.sudo(False), field_name='avatar_128', placeholder=placeholder).get_response()
+        if not channel_partner_sudo or not channel_partner_sudo.env['mail.channel.partner'].search([('channel_id', '=', channel_id), ('guest_id', '=', guest_id)], limit=1):
+            if request.env.user.share:
+                placeholder = channel_partner_sudo.env['mail.guest'].browse(guest_id).exists()._avatar_get_placeholder()
+                return channel_partner_sudo.env['ir.http']._placeholder_image_get_response(placeholder)
+            return channel_partner_sudo.sudo(False).env['ir.http']._content_image(model='mail.guest', res_id=guest_id, field='avatar_128')
+        return channel_partner_sudo.env['ir.http']._content_image(model='mail.guest', res_id=guest_id, field='avatar_128')
 
     @http.route('/mail/channel/<int:channel_id>/attachment/<int:attachment_id>', methods=['GET'], type='http', auth='public')
     def mail_channel_attachment(self, channel_id, attachment_id, download=None, **kwargs):
         channel_partner_sudo = request.env['mail.channel.partner']._get_as_sudo_from_request_or_raise(request=request, channel_id=int(channel_id))
-        attachment_sudo = channel_partner_sudo.env['ir.attachment'].search([
-                ('id', '=', int(attachment_id)),
-                ('res_id', '=', int(channel_id)),
-                ('res_model', '=', 'mail.channel')
-            ], limit=1)
-        if not attachment_sudo:
+        if not channel_partner_sudo.env['ir.attachment'].search([('id', '=', int(attachment_id)), ('res_id', '=', int(channel_id)), ('res_model', '=', 'mail.channel')], limit=1):
             raise NotFound()
-        return request.env['ir.binary']._get_stream_from(attachment_sudo).get_response(as_attachment=download)
+        return channel_partner_sudo.env['ir.http']._get_content_common(res_id=int(attachment_id), download=download)
 
     @http.route([
         '/mail/channel/<int:channel_id>/image/<int:attachment_id>',
@@ -173,18 +166,9 @@ class DiscussController(http.Controller):
     ], methods=['GET'], type='http', auth='public')
     def fetch_image(self, channel_id, attachment_id, width=0, height=0, **kwargs):
         channel_partner_sudo = request.env['mail.channel.partner']._get_as_sudo_from_request_or_raise(request=request, channel_id=int(channel_id))
-        attachment_sudo = channel_partner_sudo.env['ir.attachment'].search([
-                ('id', '=', int(attachment_id)),
-                ('res_id', '=', int(channel_id)),
-                ('res_model', '=', 'mail.channel'),
-            ], limit=1)
-
-        if not attachment_sudo:
+        if not channel_partner_sudo.env['ir.attachment'].search([('id', '=', int(attachment_id)), ('res_id', '=', int(channel_id)), ('res_model', '=', 'mail.channel')], limit=1):
             raise NotFound()
-
-        return request.env['ir.binary']._get_image_stream_from(
-            attachment_sudo, width=int(width), height=int(height)
-        ).get_response(as_attachment=kwargs.get('download'))
+        return channel_partner_sudo.env['ir.http']._content_image(res_id=int(attachment_id), height=int(height), width=int(width))
 
     # --------------------------------------------------------------------------
     # Client Initialization
@@ -202,13 +186,7 @@ class DiscussController(http.Controller):
     @http.route('/mail/load_message_failures', methods=['POST'], type='json', auth='user')
     def mail_load_message_failures(self, **kwargs):
         return request.env.user.partner_id._message_fetch_failed()
-
-    @http.route('/mail/get_model_definitions', methods=['POST'], type='http', auth='user')
-    def get_model_definitions(self, model_names_to_fetch, **kwargs):
-        return request.make_response(json.dumps(
-            request.env['ir.model']._get_model_definitions(json.loads(model_names_to_fetch)),
-        ))
-
+ 
     # --------------------------------------------------------------------------
     # Mailbox
     # --------------------------------------------------------------------------
@@ -251,7 +229,7 @@ class DiscussController(http.Controller):
         return {
             'id': message_sudo.id,
             'body': message_sudo.body,
-            'attachments': [('insert-and-replace', message_sudo.attachment_ids._attachment_format())],
+            'attachments': [('insert-and-replace', message_sudo.attachment_ids._attachment_format(commands=True))],
         }
 
     @http.route('/mail/attachment/upload', methods=['POST'], type='http', auth='public')
@@ -289,7 +267,10 @@ class DiscussController(http.Controller):
                 attachmentData['accessToken'] = attachment.access_token
         except AccessError:
             attachmentData = {'error': _("You are not allowed to upload an attachment here.")}
-        return request.make_json_response(attachmentData)
+        return request.make_response(
+            data=json.dumps(attachmentData),
+            headers=[('Content-Type', 'application/json')]
+        )
 
     @http.route('/mail/attachment/delete', methods=['POST'], type='json', auth='public')
     def mail_attachment_delete(self, attachment_id, access_token=None, **kwargs):
@@ -431,8 +412,11 @@ class DiscussController(http.Controller):
 
     @http.route('/mail/thread/data', methods=['POST'], type='json', auth='user')
     def mail_thread_data(self, thread_model, thread_id, request_list, **kwargs):
+        res = {}
         thread = request.env[thread_model].with_context(active_test=False).search([('id', '=', thread_id)])
-        return thread._get_mail_thread_data(request_list)
+        if 'attachments' in request_list:
+            res['attachments'] = thread.env['ir.attachment'].search([('res_id', '=', thread.id), ('res_model', '=', thread._name)], order='id desc')._attachment_format(commands=True)
+        return res
 
     @http.route('/mail/thread/messages', methods=['POST'], type='json', auth='user')
     def mail_thread_messages(self, thread_model, thread_id, max_id=None, min_id=None, limit=30, **kwargs):
@@ -441,6 +425,35 @@ class DiscussController(http.Controller):
             ('model', '=', thread_model),
             ('message_type', '!=', 'user_notification'),
         ], max_id=max_id, min_id=min_id, limit=limit)
+
+    @http.route('/mail/read_followers', methods=['POST'], type='json', auth='user')
+    def read_followers(self, res_model, res_id):
+        request.env['mail.followers'].check_access_rights("read")
+        request.env[res_model].check_access_rights("read")
+        request.env[res_model].browse(res_id).check_access_rule("read")
+        follower_recs = request.env['mail.followers'].search([('res_model', '=', res_model), ('res_id', '=', res_id)])
+
+        followers = []
+        follower_id = None
+        for follower in follower_recs:
+            if follower.partner_id == request.env.user.partner_id:
+                follower_id = follower.id
+            followers.append({
+                'id': follower.id,
+                'partner_id': follower.partner_id.id,
+                'name': follower.name,
+                'display_name': follower.display_name,
+                'email': follower.email,
+                'is_active': follower.is_active,
+                # When editing the followers, the "pencil" icon that leads to the edition of subtypes
+                # should be always be displayed and not only when "debug" mode is activated.
+                'is_editable': True,
+                'partner': follower.partner_id.mail_partner_format()[follower.partner_id],
+            })
+        return {
+            'followers': followers,
+            'subtypes': self.read_subscription_data(follower_id) if follower_id else None
+        }
 
     @http.route('/mail/read_subscription_data', methods=['POST'], type='json', auth='user')
     def read_subscription_data(self, follower_id):
@@ -470,6 +483,16 @@ class DiscussController(http.Controller):
         } for subtype in subtypes]
         return sorted(subtypes_list,
                       key=lambda it: (it['parent_model'] or '', it['res_model'] or '', it['internal'], it['sequence']))
+
+    @http.route('/mail/get_suggested_recipients', methods=['POST'], type='json', auth='user')
+    def message_get_suggested_recipients(self, model, res_ids):
+        records = request.env[model].browse(res_ids)
+        try:
+            records.check_access_rule('read')
+            records.check_access_rights('read')
+        except Exception:
+            return {}
+        return records._message_get_suggested_recipients()
 
     # --------------------------------------------------------------------------
     # RTC API TODO move check logic in routes.

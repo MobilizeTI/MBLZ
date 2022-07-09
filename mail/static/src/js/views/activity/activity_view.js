@@ -14,7 +14,7 @@ const _lt = core._lt;
 const ActivityView = BasicView.extend({
     accesskey: "a",
     display_name: _lt('Activity'),
-    icon: 'fa fa-clock-o',
+    icon: 'fa-clock-o',
     config: _.extend({}, BasicView.prototype.config, {
         Controller: ActivityController,
         Model: ActivityModel,

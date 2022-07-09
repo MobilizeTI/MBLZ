@@ -31,7 +31,6 @@
                                 <field name="default"/>
                                 <field name="internal"/>
                                 <field name="hidden"/>
-                                <field name="track_recipients"/>
                             </group>
                             <group string='Auto subscription'>
                                 <field name="parent_id"/>

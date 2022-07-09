@@ -55,7 +55,7 @@ class MailActivity(models.Model):
     res_model = fields.Char(
         'Related Document Model',
         index=True, related='res_model_id.model', compute_sudo=True, store=True, readonly=True)
-    res_id = fields.Many2oneReference(string='Related Document ID', index=True, model_field='res_model')
+    res_id = fields.Many2oneReference(string='Related Document ID', index=True, required=True, model_field='res_model')
     res_name = fields.Char(
         'Document Name', compute='_compute_res_name', compute_sudo=True, store=True,
         help="Display name of the related document.", readonly=True)
@@ -94,15 +94,6 @@ class MailActivity(models.Model):
     chaining_type = fields.Selection(related='activity_type_id.chaining_type', readonly=True)
     # access
     can_write = fields.Boolean(compute='_compute_can_write', help='Technical field to hide buttons if the current user has no access.')
-
-    _sql_constraints = [
-        # Required on a Many2one reference field is not sufficient as actually
-        # writing 0 is considered as a valid value, because this is an integer field.
-        # We therefore need a specific constraint check.
-        ('check_res_id_is_set',
-         'CHECK(res_id IS NOT NULL AND res_id !=0 )',
-         'Activities have to be linked to records with a not null res_id.')
-    ]
 
     @api.onchange('previous_activity_type_id')
     def _compute_has_recommended_activities(self):
@@ -359,7 +350,7 @@ class MailActivity(models.Model):
         # check read access rights before checking the actual rules on the given ids
         super(MailActivity, self.with_user(access_rights_uid or self._uid)).check_access_rights('read')
 
-        self.flush_model(['res_model', 'res_id'])
+        self.flush(['res_model', 'res_id'])
         activities_to_check = []
         for sub_ids in self._cr.split_for_in_conditions(ids):
             self._cr.execute("""
@@ -436,23 +427,25 @@ class MailActivity(models.Model):
     def action_notify(self):
         if not self:
             return
+        original_context = self.env.context
         body_template = self.env.ref('mail.message_activity_assigned')
         for activity in self:
             if activity.user_id.lang:
                 # Send the notification in the assigned user's language
+                self = self.with_context(lang=activity.user_id.lang)
+                body_template = body_template.with_context(lang=activity.user_id.lang)
                 activity = activity.with_context(lang=activity.user_id.lang)
-
-            model_description = activity.env['ir.model']._get(activity.res_model).display_name
-            body = activity.env['ir.qweb']._render(
-                'mail.message_activity_assigned',
+            model_description = self.env['ir.model']._get(activity.res_model).display_name
+            body = body_template._render(
                 dict(
                     activity=activity,
                     model_description=model_description,
-                    access_link=activity.env['mail.thread']._notify_get_action_link('view', model=activity.res_model, res_id=activity.res_id),
+                    access_link=self.env['mail.thread']._notify_get_action_link('view', model=activity.res_model, res_id=activity.res_id),
                 ),
+                engine='ir.qweb',
                 minimal_qcontext=True
             )
-            record = activity.env[activity.res_model].browse(activity.res_id)
+            record = self.env[activity.res_model].browse(activity.res_id)
             if activity.user_id:
                 record.message_notify(
                     partner_ids=activity.user_id.partner_id.ids,
@@ -464,24 +457,26 @@ class MailActivity(models.Model):
                     model_description=model_description,
                     email_layout_xmlid='mail.mail_notification_light',
                 )
+            body_template = body_template.with_context(original_context)
+            self = self.with_context(original_context)
 
     def action_done(self):
         """ Wrapper without feedback because web button add context as
         parameter, therefore setting context to feedback """
-        return self.action_feedback()
+        messages, next_activities = self._action_done()
+        return messages.ids and messages.ids[0] or False
 
     def action_feedback(self, feedback=False, attachment_ids=None):
-        messages, _next_activities = self.with_context(
-            clean_context(self.env.context)
-        )._action_done(feedback=feedback, attachment_ids=attachment_ids)
-        return messages[0].id if messages else False
+        self = self.with_context(clean_context(self.env.context))
+        messages, next_activities = self._action_done(feedback=feedback, attachment_ids=attachment_ids)
+        return messages.ids and messages.ids[0] or False
 
     def action_done_schedule_next(self):
         """ Wrapper without feedback because web button add context as
         parameter, therefore setting context to feedback """
         return self.action_feedback_schedule_next()
 
-    def action_feedback_schedule_next(self, feedback=False, attachment_ids=None):
+    def action_feedback_schedule_next(self, feedback=False):
         ctx = dict(
             clean_context(self.env.context),
             default_previous_activity_type_id=self.activity_type_id.id,
@@ -489,7 +484,7 @@ class MailActivity(models.Model):
             default_res_id=self.res_id,
             default_res_model=self.res_model,
         )
-        _messages, next_activities = self._action_done(feedback=feedback, attachment_ids=attachment_ids)  # will unlink activity, dont access self after that
+        messages, next_activities = self._action_done(feedback=feedback)  # will unlink activity, dont access self after that
         if next_activities:
             return False
         return {
@@ -567,17 +562,6 @@ class MailActivity(models.Model):
 
     def action_close_dialog(self):
         return {'type': 'ir.actions.act_window_close'}
-
-    def action_open_document(self):
-        """ Opens the related record based on the model and ID """
-        self.ensure_one()
-        return {
-            'res_id': self.res_id,
-            'res_model': self.res_model,
-            'target': 'current',
-            'type': 'ir.actions.act_window',
-            'view_mode': 'form',
-        }
 
     def activity_format(self):
         activities = self.read()

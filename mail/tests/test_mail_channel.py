@@ -43,7 +43,7 @@ class TestChannelAccessRights(MailCommon):
             'public': 'private'})
 
     @mute_logger('odoo.addons.base.models.ir_rule', 'odoo.addons.base.models.ir_model', 'odoo.models')
-    @users('user_portal')
+    @users('user_public')
     def test_access_public(self):
         # Read public group -> ok
         self.env['mail.channel'].browse(self.group_public.id).read()
@@ -56,7 +56,7 @@ class TestChannelAccessRights(MailCommon):
             self.env['mail.channel'].browse(self.group_private.id).read()
 
         # Read a private group when being a member: ok
-        self.group_private.write({'channel_partner_ids': [(4, self.user_portal.partner_id.id)]})
+        self.group_private.write({'channel_partner_ids': [(4, self.user_public.partner_id.id)]})
         self.env['mail.channel'].browse(self.group_private.id).read()
 
         # Create group: ko, no access rights
@@ -158,6 +158,7 @@ class TestChannelInternals(MailCommon):
             'name': 'Test',
             'channel_type': 'channel',
             'description': 'Description',
+            'alias_name': 'test',
             'public': 'public',
         })
         cls.test_partner = cls.env['res.partner'].with_context(cls._test_context).create({
@@ -194,10 +195,7 @@ class TestChannelInternals(MailCommon):
         self.assertEqual(channel.message_partner_ids, self.env['res.partner'])
         self.assertEqual(channel.channel_partner_ids, self.test_partner)
 
-        self.env['mail.channel.partner'].sudo().search([
-            ('partner_id', 'in', self.test_partner.ids),
-            ('channel_id', 'in', channel.ids)
-        ]).unlink()
+        channel._action_remove_members(self.test_partner)
         self.assertEqual(channel.message_partner_ids, self.env['res.partner'])
         self.assertEqual(channel.channel_partner_ids, self.env['res.partner'])
 
@@ -240,24 +238,27 @@ class TestChannelInternals(MailCommon):
         self.assertEqual(new_msg.partner_ids, self.env['res.partner'])
         self.assertEqual(new_msg.notified_partner_ids, self.env['res.partner'])
 
-    @users('employee')
     @mute_logger('odoo.addons.mail.models.mail_mail', 'odoo.models.unlink')
     def test_channel_recipients_chat(self):
         """ Posting a message on a chat should not send emails """
-        channel_info = self.env['mail.channel'].with_user(self.user_admin).channel_get((self.partner_employee | self.user_admin.partner_id).ids)
-        chat = self.env['mail.channel'].with_user(self.user_admin).browse(channel_info['id'])
+        self.test_channel.write({
+            'channel_type': 'chat',
+        })
+        self.test_channel.add_members((self.partner_employee | self.partner_admin | self.test_partner).ids)
         with self.mock_mail_gateway():
             with self.with_user('employee'):
-                new_msg = chat.message_post(body="Test", message_type='comment', subtype_xmlid='mail.mt_comment')
+                channel = self.env['mail.channel'].browse(self.test_channel.ids)
+                new_msg = channel.message_post(body="Test", message_type='comment', subtype_xmlid='mail.mt_comment')
         self.assertNotSentEmail()
-        self.assertEqual(new_msg.model, chat._name)
-        self.assertEqual(new_msg.res_id, chat.id)
+        self.assertEqual(new_msg.model, self.test_channel._name)
+        self.assertEqual(new_msg.res_id, self.test_channel.id)
         self.assertEqual(new_msg.partner_ids, self.env['res.partner'])
         self.assertEqual(new_msg.notified_partner_ids, self.env['res.partner'])
 
     @mute_logger('odoo.addons.mail.models.mail_mail', 'odoo.models.unlink')
     def test_channel_recipients_mention(self):
         """ Posting a message on a classic channel should support mentioning somebody """
+        self.test_channel.write({'alias_name': False})
         with self.mock_mail_gateway():
             self.test_channel.message_post(
                 body="Test", partner_ids=self.test_partner.ids,
@@ -333,21 +334,23 @@ class TestChannelInternals(MailCommon):
     @users('employee')
     def test_channel_info_seen(self):
         """ In case of concurrent channel_seen RPC, ensure the oldest call has no effect. """
-        channel_info = self.env['mail.channel'].with_user(self.user_admin).channel_get((self.partner_employee | self.user_admin.partner_id).ids)
-        chat = self.env['mail.channel'].with_user(self.user_admin).browse(channel_info['id'])
-        msg_1 = self._add_messages(chat, 'Body1', author=self.user_employee.partner_id)
-        msg_2 = self._add_messages(chat, 'Body2', author=self.user_employee.partner_id)
+        channel = self.env['mail.channel'].browse(self.test_channel.id)
+        channel.write({'channel_type': 'chat'})
+        channel.add_members(self.env.user.partner_id.ids)
 
-        chat._channel_seen(msg_2.id)
+        msg_1 = self._add_messages(self.test_channel, 'Body1', author=self.user_employee.partner_id)
+        msg_2 = self._add_messages(self.test_channel, 'Body2', author=self.user_employee.partner_id)
+
+        self.test_channel._channel_seen(msg_2.id)
         self.assertEqual(
-            chat.channel_info()[0]['seen_partners_info'][0]['seen_message_id'],
+            channel.channel_info()[0]['seen_partners_info'][0]['seen_message_id'],
             msg_2.id,
             "Last message id should have been updated"
         )
 
-        chat._channel_seen(msg_1.id)
+        self.test_channel._channel_seen(msg_1.id)
         self.assertEqual(
-            chat.channel_info()[0]['seen_partners_info'][0]['seen_message_id'],
+            channel.channel_info()[0]['seen_partners_info'][0]['seen_message_id'],
             msg_2.id,
             "Last message id should stay the same after mark channel as seen with an older message"
         )
@@ -393,7 +396,7 @@ class TestChannelInternals(MailCommon):
 
         # Unsubscribe archived user from the private channels, but not from public channels and not from chat
         self.user_employee.active = False
-        (test_chat | self.test_channel).invalidate_recordset(['channel_partner_ids'])
+        (test_chat | self.test_channel).invalidate_cache(fnames=['channel_partner_ids'])
         self.assertEqual(test_channel_private.channel_partner_ids, test_partner)
         self.assertEqual(test_channel_group.channel_partner_ids, test_partner)
         self.assertEqual(self.test_channel.channel_partner_ids, self.user_employee.partner_id | test_partner)
@@ -456,20 +459,19 @@ class TestChannelInternals(MailCommon):
         self.assertEqual(messages_1, messages_2)
 
     def test_channel_should_generate_correct_default_avatar(self):
-        test_channel = self.env['mail.channel'].browse(self.env['mail.channel'].channel_create(name='Channel')['id'])
-        test_channel.uuid = 'channel-uuid'
-        test_group = self.env['mail.channel'].browse(self.env['mail.channel'].create_group(partners_to=self.user_employee.partner_id.ids)['id'])
-        test_group.uuid = 'group-uuid'
-        bgcolor_channel = html_escape('hsl(316, 61%, 45%)')  # depends on uuid
-        bgcolor_group = html_escape('hsl(17, 60%, 45%)')  # depends on uuid
-        expceted_avatar_channel = (channel_avatar.replace('fill="#875a7b"', f'fill="{bgcolor_channel}"')).encode()
-        expected_avatar_group = (group_avatar.replace('fill="#875a7b"', f'fill="{bgcolor_group}"')).encode()
+        channel = self.env['mail.channel'].create({'name': '', 'uuid': 'test-uuid'})
+        bgcolor = html_escape('hsl(288, 51%, 45%)')  # depends on uuid
+        expceted_avatar_channel = (channel_avatar.replace('fill="#875a7b"', f'fill="{bgcolor}"')).encode()
+        expected_avatar_group = (group_avatar.replace('fill="#875a7b"', f'fill="{bgcolor}"')).encode()
 
-        self.assertEqual(base64.b64decode(test_channel.avatar_128), expceted_avatar_channel)
-        self.assertEqual(base64.b64decode(test_group.avatar_128), expected_avatar_group)
+        channel.channel_type = 'group'
+        self.assertEqual(base64.b64decode(channel.avatar_128), expected_avatar_group)
 
-        test_channel.image_128 = base64.b64encode(("<svg/>").encode())
-        self.assertEqual(test_channel.avatar_128, test_channel.image_128)
+        channel.channel_type = 'channel'
+        self.assertEqual(base64.b64decode(channel.avatar_128), expceted_avatar_channel)
+
+        channel.image_128 = base64.b64encode(("<svg/>").encode())
+        self.assertEqual(channel.avatar_128, channel.image_128)
 
     def test_channel_write_should_send_notification_if_image_128_changed(self):
         channel = self.env['mail.channel'].create({'name': '', 'uuid': 'test-uuid'})

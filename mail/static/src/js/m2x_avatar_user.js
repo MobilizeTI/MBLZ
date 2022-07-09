@@ -31,6 +31,7 @@ const M2XAvatarMixin = {
             throw new Error(`This widget is only supported on many2one and many2many fields pointing to ${JSON.stringify(this.supportedModels)}`);
         }
         this.className = `${this.className || ''} o_clickable_m2x_avatar`.trim();
+        this.noOpenChat = this.nodeOptions.no_open_chat || false;
     },
 
     //--------------------------------------------------------------------------
@@ -45,8 +46,11 @@ const M2XAvatarMixin = {
      * @returns {Promise}
      */
     async _openChat(params) {
-        const messaging = await Component.env.services.messaging.get();
-        return messaging.openChat(params);
+        if (!this.noOpenChat) {
+            const messaging = await Component.env.services.messaging.get();
+            return messaging.openChat(params);
+        }
+        return Promise.resolve();
     },
 };
 
@@ -97,14 +101,10 @@ export const Many2OneAvatarUser = Many2OneAvatar.extend(M2XAvatarMixin, {
                 },
                 async action() {
                     return env.services.command.openPalette({
-                        configByNamespace: {
-                            default: {
-                                emptyMessage: env._t("No users found"),
-                            },
-                        },
+                        emptyMessageByNamespace: { "default": env._t("No users found") },
                         placeholder: env._t("Select a user..."),
                         providers: [{ provide }],
-                    });
+                    })
                 },
             });
             core.bus.trigger("set_legacy_command", "web.Many2OneAvatar.assignTo", getCommandDefinition, self.el);
@@ -189,16 +189,11 @@ export const Many2OneAvatarUser = Many2OneAvatar.extend(M2XAvatarMixin, {
     _onAvatarClicked(ev) {
         ev.stopPropagation(); // in list view, prevent from opening the record
         this._openChat({ userId: this.value.res_id });
-    }
+    },
 });
 
 export const KanbanMany2OneAvatarUser = Many2OneAvatarUser.extend({
     _template: 'mail.KanbanMany2OneAvatarUser',
-
-    init() {
-        this._super(...arguments);
-        this.displayAvatarName = this.nodeOptions.display_avatar_name || false;
-    },
 });
 
 const M2MAvatarMixin = Object.assign(M2XAvatarMixin, {
@@ -278,14 +273,10 @@ export const Many2ManyAvatarUser = FieldMany2ManyTagsAvatar.extend(M2MAvatarMixi
                 },
                 action() {
                     return env.services.command.openPalette({
-                        configByNamespace: {
-                            default: {
-                                emptyMessage: env._t("No users found"),
-                            },
-                        },
+                        emptyMessageByNamespace: { "default": env._t("No users found") },
                         placeholder: env._t("Select a user..."),
                         providers: [{ provide }],
-                    });
+                    })
                 },
             })
             core.bus.trigger("set_legacy_command", "web.FieldMany2ManyTagsAvatar.assignTo", getCommandDefinition)

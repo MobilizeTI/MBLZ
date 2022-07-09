@@ -10,8 +10,8 @@
                 t-att-data-activity-type-id="type[0]" t-attf-width="{{100/props.activity_types.length}}%">
                 <div>
                     <span t-esc="type[1]"/>
-                    <span t-if="type[2].length > 0" class="dropdown float-end">
-                        <i class="fa fa-ellipsis-v fa-fw" data-bs-toggle="dropdown"/>
+                    <span t-if="type[2].length > 0" class="dropdown pull-right">
+                        <i class="fa fa-ellipsis-v fa-fw" data-toggle="dropdown"/>
                         <div class="dropdown-menu">
                             <t t-foreach="type[2]" t-as="template" t-key="template.id">
                                 <div title="This action will send an email."
@@ -25,10 +25,11 @@
                         </div>
                     </span>
                 </div>
-                <KanbanColumnProgressBarAdapter Component="widgetComponents.KanbanColumnProgressBar"
-                    widgetArgs="[getProgressBarOptions(type[0]), getProgressBarColumnState(type[0])]"
-                    t-if="activityTypeIds.includes(type[0])"
-                    onSetProgressBarState.bind="_onSetProgressBarState"/>
+                <div t-if="activityTypeIds.includes(type[0])">
+                    <KanbanColumnProgressBarAdapter Component="widgetComponents.KanbanColumnProgressBar"
+                        widgetArgs="[getProgressBarOptions(type[0]), getProgressBarColumnState(type[0])]"
+                        t-on-set-progress-bar-state="_onSetProgressBarState"/>
+                </div>
                 <div t-else="" class="mt24"/>
             </th>
         </tr>
@@ -75,8 +76,8 @@
 <t t-name="mail.ActivityViewFooter" owl="1">
     <tfoot>
         <tr class="o_data_row">
-            <td class="o_record_selector p-3" t-on-click.prevent.stop="() => this.trigger('schedule_activity')">
-                <span class="fa fa-plus pe-2"/><span>Schedule activity</span>
+            <td class="o_record_selector p-3" t-on-click.prevent.stop="trigger('schedule_activity')">
+                <span class="fa fa-plus pr-2"/><span>Schedule activity</span>
             </td>
         </tr>
     </tfoot>
@@ -84,7 +85,7 @@
 
 <div t-name="mail.ActivityRenderer" class="o_activity_view" owl="1">
     <t t-if="!props.activity_types.length" t-call="web.NoContentHelper"/>
-    <table t-else="" class="table table-bordered mb-5">
+    <table t-else="" class="table-bordered mb-5">
         <t t-call="mail.ActivityViewHeader"/>
         <t t-call="mail.ActivityViewBody"/>
         <t t-call="mail.ActivityViewFooter"/>

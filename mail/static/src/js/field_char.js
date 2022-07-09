@@ -1,6 +1,5 @@
 /** @odoo-module **/
 
-import { debounce } from "@web/core/utils/timing";
 import { FieldChar } from 'web.basic_fields';
 
 FieldChar.include({
@@ -11,16 +10,12 @@ FieldChar.include({
 
     /**
      * Support a key-based onchange in text field.
-     * The _triggerOnchange method is debounced to run after given debouce delay
-     * (or 2 seconds by default) on typing ends.
+     * The _triggerOnchange method is debounced to run 2 seconds after typing ends.
      *
      */
     init: function () {
         this._super.apply(this, arguments);
-        if (this.nodeOptions.keydown_debounce_delay === undefined) {
-            this.nodeOptions.keydown_debounce_delay = 2000;
-        }
-        this._triggerOnchange = debounce(this._triggerOnchange, this.nodeOptions.keydown_debounce_delay);
+        this._triggerOnchange = _.debounce(this._triggerOnchange, 2000);
     },
 
 
@@ -49,8 +44,8 @@ FieldChar.include({
 
     /**
      * Triggers the 'change' event to refresh the value.
-     * This method is debounced to run after given debouce delay on typing ends.
-     * (to avoid spamming the server while the user is typing their message)
+     * This method is debounced to run 2 seconds after typing ends.
+     * (to avoid spamming the server while the user is typing his message)
      *
      * @private
      */

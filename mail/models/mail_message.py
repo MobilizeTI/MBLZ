@@ -3,9 +3,9 @@
 
 import logging
 import re
-import textwrap
-from binascii import Error as binascii_error
 from collections import defaultdict
+
+from binascii import Error as binascii_error
 
 from odoo import _, api, Command, fields, models, modules, tools
 from odoo.exceptions import AccessError
@@ -75,7 +75,7 @@ class Message(models.Model):
         missing_author = 'author_id' in fields and 'author_id' not in res
         missing_email_from = 'email_from' in fields and 'email_from' not in res
         if missing_author or missing_email_from:
-            author_id, email_from = self.env['mail.thread']._message_compute_author(res.get('author_id'), res.get('email_from'), raise_on_email=False)
+            author_id, email_from = self.env['mail.thread']._message_compute_author(res.get('author_id'), res.get('email_from'), raise_exception=False)
             if missing_email_from:
                 res['email_from'] = email_from
             if missing_author:
@@ -89,9 +89,6 @@ class Message(models.Model):
     description = fields.Char(
         'Short description', compute="_compute_description",
         help='Message description: either the subject, or the beginning of the body')
-    preview = fields.Char(
-        'Preview', compute='_compute_preview',
-        help='The text-only beginning of the body used as email preview.')
     attachment_ids = fields.Many2many(
         'ir.attachment', 'message_attachment_rel',
         'message_id', 'attachment_id',
@@ -99,12 +96,12 @@ class Message(models.Model):
         help='Attachments are linked to a document through model / res_id and to the message '
              'through this field.')
     parent_id = fields.Many2one(
-        'mail.message', 'Parent Message', index='btree_not_null', ondelete='set null',
+        'mail.message', 'Parent Message', index=True, ondelete='set null',
         help="Initial thread message.")
     child_ids = fields.One2many('mail.message', 'parent_id', 'Child Messages')
     # related document
-    model = fields.Char('Related Document Model')
-    res_id = fields.Many2oneReference('Related Document ID', model_field='model')
+    model = fields.Char('Related Document Model', index=True)
+    res_id = fields.Many2oneReference('Related Document ID', index=True, model_field='model')
     record_name = fields.Char('Message Record Name', help="Name get of the related document.")
     # characteristics
     message_type = fields.Selection([
@@ -164,12 +161,12 @@ class Message(models.Model):
     reply_to_force_new = fields.Boolean(
         'No threading for answers',
         help='If true, answers do not go in the original document discussion thread. Instead, it will check for the reply_to in tracking message-id and redirected accordingly. This has an impact on the generated message-id.')
-    message_id = fields.Char('Message-Id', help='Message unique identifier', index='btree', readonly=1, copy=False)
+    message_id = fields.Char('Message-Id', help='Message unique identifier', index=True, readonly=1, copy=False)
     reply_to = fields.Char('Reply-To', help='Reply email address. Setting the reply_to bypasses the automatic thread creation.')
     mail_server_id = fields.Many2one('ir.mail_server', 'Outgoing mail server')
     # keep notification layout informations to be able to generate mail again
     email_layout_xmlid = fields.Char('Layout', copy=False)  # xml id of layout
-    email_add_signature = fields.Boolean(default=True)
+    add_sign = fields.Boolean(default=True)
     # `test_adv_activity`, `test_adv_activity_full`, `test_message_assignation_inbox`,...
     # By setting an inverse for mail.mail_message_id, the number of SQL queries done by `modified` is reduced.
     # 'mail.mail' inherits from `mail.message`: `_inherits = {'mail.message': 'mail_message_id'}`
@@ -181,18 +178,13 @@ class Message(models.Model):
     canned_response_ids = fields.One2many('mail.shortcode', 'message_ids', string="Canned Responses", store=False)
     reaction_ids = fields.One2many('mail.message.reaction', 'message_id', string="Reactions", groups="base.group_system")
 
-    @api.depends('body', 'subject')
     def _compute_description(self):
         for message in self:
             if message.subject:
                 message.description = message.subject
             else:
-                message.description = message._get_message_preview(max_char=30)
-
-    @api.depends('body')
-    def _compute_preview(self):
-        for message in self:
-            message.preview = message._get_message_preview()
+                plaintext_ct = '' if not message.body else tools.html2plaintext(message.body)
+                message.description = plaintext_ct[:30] + '%s' % (' [...]' if len(plaintext_ct) >= 30 else '')
 
     @api.depends('author_id', 'author_guest_id')
     @api.depends_context('guest', 'uid')
@@ -256,7 +248,6 @@ class Message(models.Model):
         self._cr.execute("""SELECT indexname FROM pg_indexes WHERE indexname = 'mail_message_model_res_id_idx'""")
         if not self._cr.fetchone():
             self._cr.execute("""CREATE INDEX mail_message_model_res_id_idx ON mail_message (model, res_id)""")
-        self._cr.execute("""CREATE INDEX IF NOT EXISTS mail_message_model_res_id_id_idx ON mail_message (model, res_id, id)""")
 
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
@@ -298,8 +289,8 @@ class Message(models.Model):
         # check read access rights before checking the actual rules on the given ids
         super(Message, self.with_user(access_rights_uid or self._uid)).check_access_rights('read')
 
-        self.flush_recordset(['model', 'res_id', 'author_id', 'message_type', 'partner_ids'])
-        self.env['mail.notification'].flush_model(['mail_message_id', 'res_partner_id'])
+        self.flush(['model', 'res_id', 'author_id', 'message_type', 'partner_ids'])
+        self.env['mail.notification'].flush(['mail_message_id', 'res_partner_id'])
         for sub_ids in self._cr.split_for_in_conditions(ids):
             self._cr.execute("""
                 SELECT DISTINCT m.id, m.model, m.res_id, m.author_id, m.message_type,
@@ -402,8 +393,8 @@ class Message(models.Model):
         # Read mail_message.ids to have their values
         message_values = dict((message_id, {}) for message_id in self.ids)
 
-        self.flush_recordset(['model', 'res_id', 'author_id', 'parent_id', 'message_type', 'partner_ids'])
-        self.env['mail.notification'].flush_model(['mail_message_id', 'res_partner_id'])
+        self.flush(['model', 'res_id', 'author_id', 'parent_id', 'message_type', 'partner_ids'])
+        self.env['mail.notification'].flush(['mail_message_id', 'res_partner_id'])
 
         if operation == 'read':
             self._cr.execute("""
@@ -565,7 +556,7 @@ class Message(models.Model):
         tracking_values_list = []
         for values in values_list:
             if 'email_from' not in values:  # needed to compute reply_to
-                _author_id, email_from = self.env['mail.thread']._message_compute_author(values.get('author_id'), email_from=None, raise_on_email=False)
+                author_id, email_from = self.env['mail.thread']._message_compute_author(values.get('author_id'), email_from=None, raise_exception=False)
                 values['email_from'] = email_from
             if not values.get('message_id'):
                 values['message_id'] = self._get_message_id(values)
@@ -683,9 +674,22 @@ class Message(models.Model):
 
         return super(Message, self).export_data(fields_to_export)
 
-    # ------------------------------------------------------
-    # ACTIONS
-    # ----------------------------------------------------
+    def _update_content(self, body, attachment_ids):
+        self.ensure_one()
+        thread = self.env[self.model].browse(self.res_id)
+        thread._check_can_update_message_content(self)
+        self.body = body
+        if not attachment_ids:
+            self.attachment_ids._delete_and_notify()
+        else:
+            message_values = {
+                'model': self.model,
+                'body': body,
+                'res_id': self.res_id,
+            }
+            attachement_values = thread._message_post_process_attachments([], attachment_ids, message_values)
+            self.update(attachement_values)
+        thread._message_update_content_after_hook(self)
 
     def action_open_document(self):
         """ Opens the related record based on the model and ID """
@@ -765,7 +769,7 @@ class Message(models.Model):
         """ Toggle messages as (un)starred. Technically, the notifications related
             to uid are set to (un)starred.
         """
-        # a user should always be able to star a message they can read
+        # a user should always be able to star a message he can read
         self.check_access_rule('read')
         starred = not self.starred
         if starred:
@@ -812,28 +816,11 @@ class Message(models.Model):
         reaction.unlink()
         self.env[self.model].browse(self.res_id)._message_remove_reaction_after_hook(message=self, content=content)
 
-    def _update_content(self, body, attachment_ids):
-        self.ensure_one()
-        thread = self.env[self.model].browse(self.res_id)
-        thread._check_can_update_message_content(self)
-        self.body = body
-        if not attachment_ids:
-            self.attachment_ids._delete_and_notify()
-        else:
-            message_values = {
-                'model': self.model,
-                'body': body,
-                'res_id': self.res_id,
-            }
-            attachement_values = thread._message_post_process_attachments([], attachment_ids, message_values)
-            self.update(attachement_values)
-        thread._message_update_content_after_hook(self)
-
     # ------------------------------------------------------
     # MESSAGE READ / FETCH / FAILURE API
     # ------------------------------------------------------
 
-    def _message_format(self, fnames, format_reply=True, legacy=False):
+    def _message_format(self, fnames, format_reply=True):
         """Reads values from messages and formats them for the web client."""
         self.check_access_rule('read')
         vals_list = self._read_format(fnames)
@@ -851,6 +838,20 @@ class Message(models.Model):
                 author = (message_sudo.author_id.id, message_sudo.author_id.display_name)
             else:
                 author = (0, message_sudo.email_from)
+
+            # Tracking values
+            tracking_value_ids = []
+            for tracking in message_sudo.tracking_value_ids:
+                groups = tracking.field_groups
+                if not groups or self.env.is_superuser() or self.user_has_groups(groups):
+                    tracking_value_ids.append({
+                        'id': tracking.id,
+                        'changed_field': tracking.field_desc,
+                        'old_value': tracking.get_old_display_value()[0],
+                        'new_value': tracking.get_new_display_value()[0],
+                        'field_type': tracking.field_type,
+                        'currency_id': tracking.currency_id.id,
+                    })
 
             if message_sudo.model and message_sudo.res_id:
                 record_name = self.env[message_sudo.model] \
@@ -880,11 +881,10 @@ class Message(models.Model):
             } for content, reactions in reactions_per_content.items()])]
             if format_reply and message_sudo.model == 'mail.channel' and message_sudo.parent_id:
                 vals['parentMessage'] = message_sudo.parent_id.message_format(format_reply=False)[0]
-            allowed_tracking_ids = message_sudo.tracking_value_ids.filtered(lambda tracking: not tracking.field_groups or self.env.is_superuser() or self.user_has_groups(tracking.field_groups))
             vals.update({
                 'notifications': message_sudo.notification_ids._filtered_for_web_client()._notification_format(),
-                'attachment_ids': [('insert-and-replace', message_sudo.attachment_ids._attachment_format())] if not legacy else message_sudo.attachment_ids._attachment_format(legacy=True),
-                'trackingValues': [('insert-and-replace', allowed_tracking_ids._tracking_value_format())],
+                'attachment_ids': message_sudo.attachment_ids._attachment_format(),
+                'tracking_value_ids': tracking_value_ids,
                 'messageReactionGroups': reaction_groups,
                 'record_name': record_name,
             })
@@ -915,30 +915,22 @@ class Message(models.Model):
                     'body': HTML content of the message
                     'model': u'res.partner',
                     'record_name': u'Agrolait',
-                    'attachment_ids': [('insert-and-replace', [
+                    'attachment_ids': [
                         {
                             'file_type_icon': u'webimage',
                             'id': 45,
                             'name': u'sample.png',
                             'filename': u'sample.png'
                         }
-                    ])],
+                    ],
                     'needaction_partner_ids': [], # list of partner ids
                     'res_id': 7,
-                    'trackingValues': [('insert-and-replace',
+                    'tracking_value_ids': [
                         {
-                            'changedField': "Customer",
+                            'old_value': "",
+                            'changed_field': "Customer",
                             'id': 2965,
-                            'newValue': [('insert-and-replace', {
-                                'currencyId': "",
-                                'fieldType': 'char',
-                                'value': "Axelor",
-                            })],
-                            'oldValue': [('insert-and-replace', {
-                                'currencyId': "",
-                                'fieldType': 'char',
-                                'value': "",
-                            })],
+                            'new_value': "Axelor"
                         }
                     ],
                     'author_id': (3, u'Administrator'),
@@ -981,6 +973,7 @@ class Message(models.Model):
             'id', 'body', 'date', 'author_id', 'email_from',  # base message fields
             'message_type', 'subtype_id', 'subject',  # message specific
             'model', 'res_id', 'record_name',  # document related
+            'partner_ids',  # recipients
             'starred_partner_ids',  # list of partner ids for whom the message is starred
         ]
 
@@ -1007,7 +1000,7 @@ class Message(models.Model):
         messages = self.env['mail.message']
         for message in self:
             # Check if user has access to the record before displaying a notification about it.
-            # In case the user switches from one company to another, it might happen that they don't
+            # In case the user switches from one company to another, it might happen that he doesn't
             # have access to the record related to the notification. In this case, we skip it.
             # YTI FIXME: check allowed_company_ids if necessary
             if message.model and message.res_id:
@@ -1034,15 +1027,6 @@ class Message(models.Model):
     # ------------------------------------------------------
     # TOOLS
     # ------------------------------------------------------
-
-    def _get_message_preview(self, max_char=190):
-        """Returns an unformatted version of the message body. Unless `max_char=0` is passed,
-        output will be capped at max_char characters with a ' [...]' suffix if applicable.
-        Default `max_char` is the longest known mail client preview length (Outlook 2013)."""
-        self.ensure_one()
-
-        plaintext_ct = tools.html_to_inner_content(self.body)
-        return textwrap.shorten(plaintext_ct, max_char) if max_char else plaintext_ct
 
     @api.model
     def _get_record_name(self, values):
@@ -1092,13 +1076,17 @@ class Message(models.Model):
 
     def _invalidate_documents(self, model=None, res_id=None):
         """ Invalidate the cache of the documents followed by ``self``. """
-        fnames = ['message_ids', 'message_needaction', 'message_needaction_counter']
-        self.flush_recordset(['model', 'res_id'])
         for record in self:
             model = model or record.model
             res_id = res_id or record.res_id
             if issubclass(self.pool[model], self.pool['mail.thread']):
-                self.env[model].browse(res_id).invalidate_recordset(fnames)
+                self.env[model].invalidate_cache(fnames=[
+                    'message_ids',
+                    'message_unread',
+                    'message_unread_counter',
+                    'message_needaction',
+                    'message_needaction_counter',
+                ], ids=[res_id])
 
     def _get_search_domain_share(self):
         return ['&', '&', ('is_internal', '=', False), ('subtype_id', '!=', False), ('subtype_id.internal', '=', False)]
