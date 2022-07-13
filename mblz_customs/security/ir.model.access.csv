@@ -1,2 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_mblz_customs_mblz_customs,mblz_customs.mblz_customs,model_mblz_customs_mblz_customs,base.group_user,1,1,1,1
