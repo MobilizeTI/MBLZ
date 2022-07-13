@@ -9,7 +9,7 @@
 [submodule "mblz_customs"]
 	path = mblz_customs
 	url = git@github.com:MobilizeDevTeam/mblz_customs.git
-	branch = 15.0
+	branch = 15.0-master
 [submodule "account_group_hierarchy"]
 	path = account_group_hierarchy
 	url = git@github.com:MobilizeDevTeam/account_group_hierarchy.git
