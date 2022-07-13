@@ -10,3 +10,7 @@
 	path = app_project_superbar
 	url = git@github.com:MobilizeDevTeam/app_project_superbar.git
 	branch = 15.0
+[submodule "mblz_customs"]
+	path = mblz_customs
+	url = git@github.com:MobilizeDevTeam/mblz_customs.git
+	branch = 15.0
