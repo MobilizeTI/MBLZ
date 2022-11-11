@@ -14,3 +14,7 @@
 	path = account_group_hierarchy
 	url = git@github.com:MobilizeDevTeam/account_group_hierarchy.git
 	branch = 14.0
+[submodule "default_followers"]
+	path = default_followers
+	url = git@github.com:MobilizeDevTeam/default_followers.git
+	branch = 15.0
